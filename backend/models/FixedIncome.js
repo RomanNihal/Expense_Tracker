@@ -1,7 +1,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
-const DailyExpense = sequelize.define('DailyExpense', {
+const FixedIncome = sequelize.define('FixedIncome', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -11,24 +11,14 @@ const DailyExpense = sequelize.define('DailyExpense', {
     type: DataTypes.INTEGER,
     allowNull: false
   },
-  name: {
+  source: {
     type: DataTypes.STRING,
     allowNull: false
   },
   amount: {
-    type: DataTypes.DECIMAL(10, 2),
-    allowNull: false
-  },
-  expenseDate: {
-    type: DataTypes.DATEONLY,
+    type: DataTypes.DECIMAL(12, 2),
     allowNull: false
   }
-}, {
-  indexes: [
-    {
-      fields: ['userId', 'expenseDate']
-    }
-  ]
 });
 
-module.exports = DailyExpense;
+module.exports = FixedIncome;

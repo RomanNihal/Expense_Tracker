@@ -19,6 +19,13 @@ lerna-debug.log*
 # Database
 backend/database.sqlite
 backend/database.sqlite-journal
+backend/database.sqlite-wal
+backend/database.sqlite-shm
+
+# Scratch
+scratch/
+db-tools.js
+
 
 # IDEs
 .vscode/

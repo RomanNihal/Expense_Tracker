@@ -1,4 +1,4 @@
-const { FixedExpense, DailyExpense } = require('../models');
+const { FixedExpense, Transaction } = require('../models');
 const { Op } = require('sequelize');
 
 // Fixed Expenses
@@ -21,6 +21,23 @@ exports.addFixedExpense = async (req, res) => {
   }
 };
 
+exports.updateFixedExpense = async (req, res) => {
+  try {
+    const { name, amount, description } = req.body;
+    const [updated] = await FixedExpense.update(
+      { name, amount, description },
+      { where: { id: req.params.id, userId: req.user.id } }
+    );
+    if (updated === 0) {
+      return res.status(404).json({ success: false, error: 'Fixed expense not found or unauthorized' });
+    }
+    res.json({ success: true, message: 'Updated successfully' });
+
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
 exports.deleteFixedExpense = async (req, res) => {
   try {
     await FixedExpense.destroy({ where: { id: req.params.id, userId: req.user.id } });
@@ -30,10 +47,10 @@ exports.deleteFixedExpense = async (req, res) => {
   }
 };
 
-// Daily Expenses
+// Transactions (Previously Daily Expenses)
 exports.getDailyExpenses = async (req, res) => {
   try {
-    const { date, month } = req.query;
+    const { date, month, type } = req.query; // date in query can stay 'date' as a param name
     const where = { userId: req.user.id };
     
     if (date) {
@@ -42,8 +59,15 @@ exports.getDailyExpenses = async (req, res) => {
       where.expenseDate = { [Op.like]: `${month}%` };
     }
 
-    const expenses = await DailyExpense.findAll({ where, order: [['expenseDate', 'DESC'], ['createdAt', 'DESC']] });
-    res.json({ success: true, data: expenses });
+    if (type) {
+      where.type = type;
+    }
+
+    const transactions = await Transaction.findAll({ 
+      where, 
+      order: [['expenseDate', 'DESC'], ['createdAt', 'DESC']] 
+    });
+    res.json({ success: true, data: transactions });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -51,24 +75,51 @@ exports.getDailyExpenses = async (req, res) => {
 
 exports.addDailyExpense = async (req, res) => {
   try {
-    const { name, amount, expenseDate } = req.body;
-    const expense = await DailyExpense.create({ 
+    const { name, amount, expenseDate, type } = req.body;
+    const transaction = await Transaction.create({ 
       userId: req.user.id, 
       name, 
       amount, 
-      expenseDate: expenseDate || new Date().toISOString().split('T')[0] 
+      expenseDate: expenseDate || new Date().toISOString().split('T')[0],
+      type: type || 'EXPENSE'
     });
-    res.status(201).json({ success: true, data: expense });
+    res.status(201).json({ success: true, data: transaction });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 };
 
+
 exports.deleteDailyExpense = async (req, res) => {
   try {
-    await DailyExpense.destroy({ where: { id: req.params.id, userId: req.user.id } });
+    await Transaction.destroy({ where: { id: req.params.id, userId: req.user.id } });
     res.json({ success: true, message: 'Deleted successfully' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 };
+
+exports.updateDailyExpense = async (req, res) => {
+  try {
+    const { name, amount, expenseDate, type } = req.body;
+    console.log(`Updating Transaction ID: ${req.params.id} for User: ${req.user.id}`);
+    
+    const [updated] = await Transaction.update(
+      { name, amount, expenseDate, type },
+      { where: { id: parseInt(req.params.id), userId: req.user.id } }
+    );
+
+    if (updated === 0) {
+      console.log('No rows updated. Check if ID exists and belongs to user.');
+      return res.status(404).json({ success: false, error: 'Transaction not found or unauthorized' });
+    }
+    
+    res.json({ success: true, message: 'Updated successfully' });
+  } catch (error) {
+    console.error('Update Error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+
+

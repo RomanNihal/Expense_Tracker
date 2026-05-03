@@ -1,106 +1,145 @@
-const { MonthlyIncome, FixedExpense, SavingsGoal, DailyExpense } = require('../models');
+const { FixedIncome, FixedExpense, SavingsGoal, Transaction } = require('../models');
 const { Op } = require('sequelize');
+
+// Helper to auto-apply fixed income/expenses for the current month
+const autoApplyFixedItems = async (userId) => {
+  const now = new Date();
+  const currentMonthStr = now.toISOString().slice(0, 7); // YYYY-MM
+  const firstOfMonth = `${currentMonthStr}-01`;
+
+  // 1. Apply Fixed Income (check each one)
+  const fixedIncomes = await FixedIncome.findAll({ where: { userId } });
+  for (const item of fixedIncomes) {
+    const itemName = `Fixed: ${item.source}`;
+    const exists = await Transaction.findOne({
+      where: { userId, expenseDate: firstOfMonth, name: itemName, type: 'INCOME' }
+    });
+    if (!exists) {
+      await Transaction.create({
+        userId,
+        name: itemName,
+        amount: item.amount,
+        type: 'INCOME',
+        expenseDate: firstOfMonth,
+        isFixed: true
+      });
+    }
+  }
+
+  // 2. Apply Fixed Expenses (check each one)
+  const fixedExpenses = await FixedExpense.findAll({ where: { userId } });
+  for (const item of fixedExpenses) {
+    const itemName = `Fixed: ${item.name}`;
+    const exists = await Transaction.findOne({
+      where: { userId, expenseDate: firstOfMonth, name: itemName, type: 'EXPENSE' }
+    });
+    if (!exists) {
+      await Transaction.create({
+        userId,
+        name: itemName,
+        amount: item.amount,
+        type: 'EXPENSE',
+        expenseDate: firstOfMonth,
+        isFixed: true
+      });
+    }
+  }
+
+  // 3. Apply Savings Goal (check each active one)
+  const savingsGoal = await SavingsGoal.findOne({ where: { userId, isActive: true } });
+  if (savingsGoal) {
+    const itemName = `Savings: ${savingsGoal.name}`;
+    const exists = await Transaction.findOne({
+      where: { userId, expenseDate: firstOfMonth, name: itemName, type: 'SAVINGS' }
+    });
+    if (!exists) {
+      await Transaction.create({
+        userId,
+        name: itemName,
+        amount: savingsGoal.monthlySavings,
+        type: 'SAVINGS',
+        expenseDate: firstOfMonth,
+        isFixed: true
+      });
+    }
+  }
+};
+
+
 
 exports.getDashboardData = async (req, res) => {
   try {
     const userId = req.user.id;
     const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth() + 1; // 1-indexed
     const todayStr = now.toISOString().split('T')[0];
 
-    // 1. Get Monthly Income (Sum of all entries this month)
-    const startOfMonth = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
-    const incomeSum = await MonthlyIncome.sum('amount', {
-      where: { 
-        userId, 
-        date: { [Op.gte]: startOfMonth } 
+    // Auto-apply fixed items for this month if not already done
+    await autoApplyFixedItems(userId);
+
+    // 1. Calculate Wallet Balance
+    // Sum of all INCOME - Sum of all EXPENSE - Sum of all SAVINGS
+    const transactions = await Transaction.findAll({ where: { userId } });
+    
+    let totalBalance = 0;
+    let monthlyIncome = 0;
+    let monthlyExpenses = 0;
+    let monthlySavings = 0;
+
+    const currentMonthPrefix = now.toISOString().slice(0, 7);
+
+    transactions.forEach(t => {
+      const amt = parseFloat(t.amount);
+      if (t.type === 'INCOME') {
+        totalBalance += amt;
+        if (t.expenseDate.startsWith(currentMonthPrefix)) monthlyIncome += amt;
+      } else if (t.type === 'EXPENSE') {
+        totalBalance -= amt;
+        if (t.expenseDate.startsWith(currentMonthPrefix)) monthlyExpenses += amt;
+      } else if (t.type === 'SAVINGS') {
+        totalBalance -= amt;
+        if (t.expenseDate.startsWith(currentMonthPrefix)) monthlySavings += amt;
       }
     });
-    const monthlyIncome = incomeSum ? parseFloat(incomeSum) : 0;
 
-    // 2. Get Fixed Expenses
-    const fixedExpensesList = await FixedExpense.findAll({ where: { userId } });
-    const totalFixedExpensesSum = fixedExpensesList.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
+    // 2. Get Fixed Settings for display
+    const fixedIncomes = await FixedIncome.findAll({ where: { userId } });
+    const fixedExpenses = await FixedExpense.findAll({ where: { userId } });
+    const savingsGoal = await SavingsGoal.findOne({ where: { userId, isActive: true } });
 
-    // 3. Get Active Savings Goal
-    const savingsGoal = await SavingsGoal.findOne({
-      where: { userId, isActive: true }
-    });
-    const monthlySavingsAmount = savingsGoal ? parseFloat(savingsGoal.monthlySavings) : 0;
+    // 3. Today's Expenses
+    const todayExpenses = transactions
+      .filter(t => t.expenseDate === todayStr && t.type === 'EXPENSE')
+      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
 
-    // 4. Calculate Total Fixed (Fixed + Savings)
-    const totalFixedCosts = totalFixedExpensesSum + monthlySavingsAmount;
-
-    // 5. Calculate Days Remaining in Month
+    // 4. Days remaining
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
     const lastDayOfMonth = new Date(currentYear, currentMonth, 0).getDate();
-    const currentDay = now.getDate();
-    const daysRemaining = (lastDayOfMonth - currentDay) + 1; // Include today
+    const daysRemaining = (lastDayOfMonth - now.getDate()) + 1;
 
-    // 6. Calculate Max Daily Expense
-    // Rule: (Income - Total Fixed Costs) / Days Remaining
-    const availableForDaily = monthlyIncome - totalFixedCosts;
-    
-    // We need to subtract daily expenses ALREADY spent this month except today? 
-    // Actually the rule in the doc says: (Monthly Income - Total Fixed Expenses) / Days Remaining
-    // But usually we should subtract what we already spent this month to get the NEW daily limit.
-    // Let's stick to the doc's simple rule first, or refine it.
-    // The doc says: maxDailyExpense: number, // (income - fixed - savings) / daysRemaining
-    // This implies it's a STATIC goal for the month if we haven't spent anything.
-    // Let's implement it as: (Income - Fixed - Savings - SpentInPreviousDaysOfMonth) / DaysRemaining
-    
-    const yesterday = new Date(now);
-    yesterday.setDate(now.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-    const spentBeforeToday = await DailyExpense.sum('amount', {
-      where: {
-        userId,
-        expenseDate: {
-          [Op.between]: [startOfMonth, yesterdayStr]
-        }
-      }
-    }) || 0;
-
-    const remainingBudget = monthlyIncome - totalFixedCosts - spentBeforeToday;
-    const maxDailyExpense = daysRemaining > 0 ? (remainingBudget / daysRemaining) : 0;
-
-    // 7. Today's Expenses
-    const todayExpenses = await DailyExpense.sum('amount', {
-      where: { userId, expenseDate: todayStr }
-    }) || 0;
-
-    // 8. Remaining Today
-    const remainingToday = maxDailyExpense - todayExpenses;
-
-    // 9. Total Monthly Expenses
-    const monthlyExpensesTotal = await DailyExpense.sum('amount', {
-      where: {
-        userId,
-        expenseDate: {
-          [Op.gte]: startOfMonth
-        }
-      }
-    }) || 0;
+    // 5. Recommended daily budget (Balance / Days remaining)
+    const recommendedDaily = daysRemaining > 0 ? (totalBalance / daysRemaining) : 0;
 
     res.json({
       success: true,
       data: {
+        totalBalance,
         monthlyIncome,
-        totalFixedExpenses: totalFixedExpensesSum,
-        monthlySavingsAmount,
-        totalFixedCosts, // Sum of both
-        daysRemaining,
-        maxDailyExpense: Math.max(0, maxDailyExpense),
+        monthlyExpenses,
+        monthlySavings,
         todayExpenses,
-        remainingToday,
-        monthlyExpensesTotal,
-        savingsGoal: savingsGoal || null,
-        fixedExpenses: fixedExpensesList
+        daysRemaining,
+        recommendedDaily: Math.max(0, recommendedDaily),
+        fixedIncomes,
+        fixedExpenses,
+        savingsGoal,
+        recentTransactions: transactions.sort((a, b) => new Date(b.expenseDate) - new Date(a.expenseDate)).slice(0, 10)
       }
     });
+
 
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 };
+

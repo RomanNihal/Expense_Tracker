@@ -3,6 +3,7 @@ import { useAuth } from './context/AuthContext';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import Dashboard from './pages/Dashboard';
+import TransactionsPage from './pages/TransactionsPage';
 import Navigation from './components/Navigation';
 
 function ProtectedRoute({ children }) {
@@ -21,6 +22,8 @@ function App() {
       <Routes>
         <Route path="/login" element={user ? <Navigate to="/" /> : <LoginPage />} />
         <Route path="/signup" element={user ? <Navigate to="/" /> : <SignupPage />} />
+        <Route path="/dashboard" element={<Navigate to="/" />} />
+        <Route path="/wallet" element={<Navigate to="/transactions" />} />
         <Route 
           path="/" 
           element={
@@ -29,9 +32,21 @@ function App() {
             </ProtectedRoute>
           } 
         />
+        <Route 
+          path="/transactions" 
+          element={
+            <ProtectedRoute>
+              <TransactionsPage />
+            </ProtectedRoute>
+          } 
+        />
+        {/* Catch-all to redirect to dashboard */}
+        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
+
     </div>
   );
 }
+
 
 export default App;

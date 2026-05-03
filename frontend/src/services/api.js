@@ -23,15 +23,32 @@ export const authService = {
 
 export const expenseService = {
   getDashboard: () => api.get('/dashboard'),
+  // Transactions
+  getTransactions: (params) => api.get('/transactions', { params }),
+  addTransaction: (data) => api.post('/transactions', data),
+  updateTransaction: (id, data) => api.put(`/transactions/${id}`, data),
+  deleteTransaction: (id) => api.delete(`/transactions/${id}`),
+
+  // Legacy Aliases (to avoid breaking things immediately)
+  addDailyExpense: (data) => api.post('/transactions', { ...data, type: 'EXPENSE' }),
+  deleteDailyExpense: (id) => api.delete(`/transactions/${id}`),
+  getDailyExpenses: (params) => api.get('/transactions', { params: { ...params, type: 'EXPENSE' } }),
+  // Income
   setIncome: (data) => api.post('/income', data),
   getIncomeHistory: () => api.get('/income'),
-  deleteIncome: (id) => api.delete(`/income/${id}`),
+  // Fixed Income Settings
+  getFixedIncomes: () => api.get('/income/fixed'),
+  addFixedIncome: (data) => api.post('/income/fixed', data),
+  updateFixedIncome: (id, data) => api.put(`/income/fixed/${id}`, data),
+  deleteFixedIncome: (id) => api.delete(`/income/fixed/${id}`),
+  // Fixed Expense Settings
+  getFixedExpenses: () => api.get('/fixed-expenses'),
   addFixedExpense: (data) => api.post('/fixed-expenses', data),
+  updateFixedExpense: (id, data) => api.put(`/fixed-expenses/${id}`, data),
   deleteFixedExpense: (id) => api.delete(`/fixed-expenses/${id}`),
-  addDailyExpense: (data) => api.post('/daily-expenses', data),
-  getDailyExpenses: (params) => api.get('/daily-expenses', { params }),
-  deleteDailyExpense: (id) => api.delete(`/daily-expenses/${id}`),
+  // Savings Goals
   addGoal: (data) => api.post('/savings-goals', data)
 };
+
 
 export default api;

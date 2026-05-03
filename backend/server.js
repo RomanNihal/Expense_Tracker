@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const sequelize = require('./config/database');
-const { User, MonthlyIncome, FixedExpense, SavingsGoal, DailyExpense } = require('./models');
+const { User, MonthlyIncome, FixedExpense, FixedIncome, SavingsGoal, Transaction } = require('./models');
 
 dotenv.config();
 
@@ -18,8 +18,9 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/income', require('./routes/income'));
 app.use('/api/fixed-expenses', require('./routes/fixedExpenses'));
 app.use('/api/savings-goals', require('./routes/savingsGoals'));
-app.use('/api/daily-expenses', require('./routes/dailyExpenses'));
+app.use('/api/transactions', require('./routes/transactions'));
 app.use('/api/dashboard', require('./routes/dashboard'));
+
 
 // Global Error Handler
 app.use((err, req, res, next) => {
@@ -31,7 +32,8 @@ app.use((err, req, res, next) => {
 });
 
 // Sync Database and Start Server
-sequelize.sync({ alter: true }) // Use alter: true to update schema without dropping tables
+sequelize.sync() // Use standard sync for SQLite stability
+
   .then(() => {
     console.log('Database synced successfully');
     app.listen(PORT, () => {
