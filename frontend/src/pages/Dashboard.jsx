@@ -10,8 +10,10 @@ import {
   History, 
   Wallet, 
   Settings,
-  ArrowRight
+  ArrowRight,
+  PiggyBank
 } from 'lucide-react';
+
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const Dashboard = () => {
@@ -186,34 +188,45 @@ const Dashboard = () => {
 
         {/* Savings Goal Card */}
         <div className="glass-card" style={{ gridColumn: 'span 4' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
-            <div style={{ padding: '0.5rem', background: 'rgba(99, 102, 241, 0.1)', borderRadius: '0.5rem' }}>
-              <Target size={20} color="var(--primary)" />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ padding: '0.5rem', background: 'rgba(99, 102, 241, 0.1)', borderRadius: '0.5rem' }}>
+                <PiggyBank size={20} color="var(--primary)" />
+              </div>
+              <span style={{ fontWeight: 600 }}>Monthly Savings</span>
             </div>
-            <span style={{ fontWeight: 600 }}>Savings Target</span>
+            <Link to="/savings" style={{ color: 'var(--primary)', fontSize: '0.75rem', fontWeight: 600, textDecoration: 'none' }}>
+              Manage Vault
+            </Link>
           </div>
-          {data.savingsGoal ? (
-            <>
-              <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'white', marginBottom: '0.25rem' }}>
-                ${(data.monthlySavings || 0).toFixed(2)}
+          
+          <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'white', marginBottom: '0.25rem' }}>
+            ${(data.monthlySavings || 0).toFixed(2)}
+          </div>
+          <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+            Combined goal allocation
+          </div>
+
+          <div style={{ display: 'grid', gap: '0.75rem' }}>
+            {(data.activeGoals || []).slice(0, 3).map(goal => (
+              <div key={goal.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', padding: '0.5rem', background: 'rgba(255,255,255,0.02)', borderRadius: '0.5rem' }}>
+                <span style={{ color: 'var(--text-muted)' }}>{goal.name}</span>
+                <span style={{ fontWeight: 600 }}>${parseFloat(goal.monthlySavings).toFixed(0)}</span>
               </div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-                Allocated for "{data.savingsGoal.name}"
+            ))}
+            {(!data.activeGoals || data.activeGoals.length === 0) && (
+              <div style={{ textAlign: 'center', padding: '1rem 0', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                No active savings goals.
               </div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                <span>Goal Progress</span>
-                <span>${(data.monthlySavings || 0).toFixed(0)} / ${data.savingsGoal.targetAmount}</span>
+            )}
+            {data.activeGoals?.length > 3 && (
+              <div style={{ fontSize: '0.75rem', color: 'var(--primary)', textAlign: 'center' }}>
+                + {data.activeGoals.length - 3} more goals
               </div>
-              <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
-                <div style={{ width: `${Math.min(100, ((data.monthlySavings || 0) / (data.savingsGoal.targetAmount || 1)) * 100)}%`, height: '100%', background: 'var(--primary)' }}></div>
-              </div>
-            </>
-          ) : (
-            <div style={{ textAlign: 'center', padding: '1rem 0', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-              No active savings goal. Set one below!
-            </div>
-          )}
+            )}
+          </div>
         </div>
+
 
         {/* Log Transaction Form */}
         <div className="glass-card" style={{ gridColumn: 'span 4' }}>

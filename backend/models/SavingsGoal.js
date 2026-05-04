@@ -27,9 +27,17 @@ const SavingsGoal = sequelize.define('SavingsGoal', {
     type: DataTypes.DECIMAL(12, 2),
     allowNull: false
   },
+  currentAmount: {
+    type: DataTypes.DECIMAL(12, 2),
+    defaultValue: 0
+  },
   isActive: {
     type: DataTypes.BOOLEAN,
     defaultValue: true
+  },
+  isCompleted: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
   }
 });
 

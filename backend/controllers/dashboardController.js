@@ -1,4 +1,5 @@
-const { FixedIncome, FixedExpense, SavingsGoal, Transaction } = require('../models');
+const { FixedIncome, FixedExpense, SavingsGoal, Transaction, SavingLog } = require('../models');
+
 const { Op } = require('sequelize');
 
 // Helper to auto-apply fixed income/expenses for the current month
@@ -45,10 +46,10 @@ const autoApplyFixedItems = async (userId) => {
     }
   }
 
-  // 3. Apply Savings Goal (check each active one)
-  const savingsGoal = await SavingsGoal.findOne({ where: { userId, isActive: true } });
-  if (savingsGoal) {
-    const itemName = `Savings: ${savingsGoal.name}`;
+  // 3. Apply Savings Goals (check all active ones)
+  const activeGoals = await SavingsGoal.findAll({ where: { userId, isActive: true, isCompleted: false } });
+  for (const goal of activeGoals) {
+    const itemName = `Savings: ${goal.name}`;
     const exists = await Transaction.findOne({
       where: { userId, expenseDate: firstOfMonth, name: itemName, type: 'SAVINGS' }
     });
@@ -56,13 +57,14 @@ const autoApplyFixedItems = async (userId) => {
       await Transaction.create({
         userId,
         name: itemName,
-        amount: savingsGoal.monthlySavings,
+        amount: goal.monthlySavings,
         type: 'SAVINGS',
         expenseDate: firstOfMonth,
         isFixed: true
       });
     }
   }
+
 };
 
 
@@ -104,7 +106,16 @@ exports.getDashboardData = async (req, res) => {
     // 2. Get Fixed Settings for display
     const fixedIncomes = await FixedIncome.findAll({ where: { userId } });
     const fixedExpenses = await FixedExpense.findAll({ where: { userId } });
-    const savingsGoal = await SavingsGoal.findOne({ where: { userId, isActive: true } });
+    const activeGoals = await SavingsGoal.findAll({ where: { userId, isActive: true, isCompleted: false } });
+
+    // Calculate actual total savings from SavingLog
+    const logs = await SavingLog.findAll({ where: { userId } });
+
+    const savingsBalance = logs.reduce((acc, log) => {
+      if (log.type === 'DEPOSIT' || log.type === 'GOAL_COMPLETION') return acc + parseFloat(log.amount);
+      if (log.type === 'WITHDRAWAL') return acc - parseFloat(log.amount);
+      return acc;
+    }, 0);
 
     // 3. Today's Expenses
     const todayExpenses = transactions
@@ -132,7 +143,8 @@ exports.getDashboardData = async (req, res) => {
         recommendedDaily: Math.max(0, recommendedDaily),
         fixedIncomes,
         fixedExpenses,
-        savingsGoal,
+        activeGoals,
+        savingsBalance,
         recentTransactions: transactions.sort((a, b) => new Date(b.expenseDate) - new Date(a.expenseDate)).slice(0, 10)
       }
     });

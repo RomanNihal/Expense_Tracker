@@ -4,6 +4,7 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import Dashboard from './pages/Dashboard';
 import TransactionsPage from './pages/TransactionsPage';
+import SavingsPage from './pages/SavingsPage';
 import Navigation from './components/Navigation';
 
 function ProtectedRoute({ children }) {
@@ -40,6 +41,15 @@ function App() {
             </ProtectedRoute>
           } 
         />
+        <Route 
+          path="/savings" 
+          element={
+            <ProtectedRoute>
+              <SavingsPage />
+            </ProtectedRoute>
+          } 
+        />
+
         {/* Catch-all to redirect to dashboard */}
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>

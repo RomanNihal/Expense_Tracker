@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, LayoutDashboard, Wallet, History } from 'lucide-react';
+import { LogOut, LayoutDashboard, Wallet, History, PiggyBank } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 const Navigation = () => {
@@ -61,8 +61,25 @@ const Navigation = () => {
             <History size={18} />
             Wallet
           </Link>
+          <Link to="/savings" style={{ 
+            color: location.pathname === '/savings' ? 'white' : 'var(--text-muted)', 
+            background: location.pathname === '/savings' ? 'rgba(255,255,255,0.05)' : 'transparent',
+            padding: '0.5rem 1rem',
+            borderRadius: '0.5rem',
+            textDecoration: 'none', 
+            fontWeight: 600,
+            fontSize: '0.9rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            transition: 'all 0.2s'
+          }}>
+            <PiggyBank size={18} />
+            Savings
+          </Link>
         </div>
       </div>
+
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', paddingRight: '1.5rem', borderRight: '1px solid var(--glass-border)' }}>

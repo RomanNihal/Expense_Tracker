@@ -20,6 +20,8 @@ app.use('/api/fixed-expenses', require('./routes/fixedExpenses'));
 app.use('/api/savings-goals', require('./routes/savingsGoals'));
 app.use('/api/transactions', require('./routes/transactions'));
 app.use('/api/dashboard', require('./routes/dashboard'));
+app.use('/api/savings', require('./routes/savings'));
+
 
 
 // Global Error Handler

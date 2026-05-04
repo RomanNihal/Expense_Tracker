@@ -4,6 +4,7 @@ const FixedExpense = require('./FixedExpense');
 const FixedIncome = require('./FixedIncome');
 const SavingsGoal = require('./SavingsGoal');
 const Transaction = require('./Transaction');
+const SavingLog = require('./SavingLog');
 
 // Relationships
 User.hasMany(MonthlyIncome, { foreignKey: 'userId', onDelete: 'CASCADE' });
@@ -21,11 +22,16 @@ SavingsGoal.belongsTo(User, { foreignKey: 'userId' });
 User.hasMany(Transaction, { foreignKey: 'userId', onDelete: 'CASCADE' });
 Transaction.belongsTo(User, { foreignKey: 'userId' });
 
+User.hasMany(SavingLog, { foreignKey: 'userId', onDelete: 'CASCADE' });
+SavingLog.belongsTo(User, { foreignKey: 'userId' });
+
 module.exports = {
   User,
   MonthlyIncome,
   FixedExpense,
   FixedIncome,
   SavingsGoal,
-  Transaction
+  Transaction,
+  SavingLog
 };
+
