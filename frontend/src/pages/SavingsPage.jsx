@@ -10,7 +10,8 @@ import {
   ArrowUpCircle, 
   ArrowDownCircle,
   History,
-  Target
+  Target,
+  Trash2
 } from 'lucide-react';
 
 const SavingsPage = () => {
@@ -47,6 +48,13 @@ const SavingsPage = () => {
       fetchData();
     }
   };
+  
+  const handleDeleteGoal = async (id) => {
+    if (window.confirm('Are you sure you want to delete this goal? This will stop future monthly allocations.')) {
+      await savingsService.deleteGoal(id);
+      fetchData();
+    }
+  };
 
   const handleLogSubmit = async (e) => {
     e.preventDefault();
@@ -58,7 +66,7 @@ const SavingsPage = () => {
 
   if (loading) return <div style={{ padding: '2rem' }}>Loading savings...</div>;
 
-  const activeGoals = data.goals.filter(g => !g.isCompleted);
+  const activeGoals = data.goals.filter(g => g.isActive && !g.isCompleted);
   const completedGoals = data.goals.filter(g => g.isCompleted);
 
   return (
@@ -114,6 +122,14 @@ const SavingsPage = () => {
                       style={{ flex: 1, justifyContent: 'center' }}
                     >
                       <Clock size={18} /> Extend
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteGoal(goal.id)}
+                      className="btn btn-outline" 
+                      style={{ width: '45px', padding: '0', justifyContent: 'center', borderColor: 'rgba(255,255,255,0.1)', color: 'var(--text-muted)' }}
+                      title="Delete Goal"
+                    >
+                      <Trash2 size={18} />
                     </button>
                   </div>
                 </div>

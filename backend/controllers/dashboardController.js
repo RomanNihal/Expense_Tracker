@@ -2,20 +2,25 @@ const { FixedIncome, FixedExpense, SavingsGoal, Transaction, SavingLog } = requi
 
 const { Op } = require('sequelize');
 
+// In-memory lock to prevent race conditions during auto-apply
+const applyLocks = new Set();
+
 // Helper to auto-apply fixed income/expenses for the current month
 const autoApplyFixedItems = async (userId) => {
-  const now = new Date();
-  const currentMonthStr = now.toISOString().slice(0, 7); // YYYY-MM
-  const firstOfMonth = `${currentMonthStr}-01`;
+  if (applyLocks.has(userId)) return;
+  applyLocks.add(userId);
 
-  // 1. Apply Fixed Income (check each one)
-  const fixedIncomes = await FixedIncome.findAll({ where: { userId } });
-  for (const item of fixedIncomes) {
-    const itemName = `Fixed: ${item.source}`;
-    const exists = await Transaction.findOne({
-      where: { userId, expenseDate: firstOfMonth, name: itemName, type: 'INCOME' }
-    });
-    if (!exists) {
+  try {
+    const now = new Date();
+    const currentMonthStr = now.toISOString().slice(0, 7); // YYYY-MM
+    const firstOfMonth = `${currentMonthStr}-01`;
+
+    // 1. Apply Fixed Income
+    const fixedIncomes = await FixedIncome.findAll({ where: { userId } });
+    for (const item of fixedIncomes) {
+      if (item.lastApplied === currentMonthStr) continue;
+
+      const itemName = `Fixed: ${item.source}`;
       await Transaction.create({
         userId,
         name: itemName,
@@ -24,17 +29,17 @@ const autoApplyFixedItems = async (userId) => {
         expenseDate: firstOfMonth,
         isFixed: true
       });
+      
+      item.lastApplied = currentMonthStr;
+      await item.save();
     }
-  }
 
-  // 2. Apply Fixed Expenses (check each one)
-  const fixedExpenses = await FixedExpense.findAll({ where: { userId } });
-  for (const item of fixedExpenses) {
-    const itemName = `Fixed: ${item.name}`;
-    const exists = await Transaction.findOne({
-      where: { userId, expenseDate: firstOfMonth, name: itemName, type: 'EXPENSE' }
-    });
-    if (!exists) {
+    // 2. Apply Fixed Expenses
+    const fixedExpenses = await FixedExpense.findAll({ where: { userId } });
+    for (const item of fixedExpenses) {
+      if (item.lastApplied === currentMonthStr) continue;
+
+      const itemName = `Fixed: ${item.name}`;
       await Transaction.create({
         userId,
         name: itemName,
@@ -43,17 +48,17 @@ const autoApplyFixedItems = async (userId) => {
         expenseDate: firstOfMonth,
         isFixed: true
       });
-    }
-  }
 
-  // 3. Apply Savings Goals (check all active ones)
-  const activeGoals = await SavingsGoal.findAll({ where: { userId, isActive: true, isCompleted: false } });
-  for (const goal of activeGoals) {
-    const itemName = `Savings: ${goal.name}`;
-    const exists = await Transaction.findOne({
-      where: { userId, expenseDate: firstOfMonth, name: itemName, type: 'SAVINGS' }
-    });
-    if (!exists) {
+      item.lastApplied = currentMonthStr;
+      await item.save();
+    }
+
+    // 3. Apply Savings Goals
+    const activeGoals = await SavingsGoal.findAll({ where: { userId, isActive: true, isCompleted: false } });
+    for (const goal of activeGoals) {
+      if (goal.lastApplied === currentMonthStr) continue;
+
+      const itemName = `Savings: ${goal.name}`;
       await Transaction.create({
         userId,
         name: itemName,
@@ -62,9 +67,15 @@ const autoApplyFixedItems = async (userId) => {
         expenseDate: firstOfMonth,
         isFixed: true
       });
-    }
-  }
 
+      goal.lastApplied = currentMonthStr;
+      await goal.save();
+    }
+  } catch (error) {
+    console.error('Auto-apply error:', error);
+  } finally {
+    applyLocks.delete(userId);
+  }
 };
 
 
@@ -81,7 +92,7 @@ exports.getDashboardData = async (req, res) => {
     // 1. Calculate Wallet Balance
     // Sum of all INCOME - Sum of all EXPENSE - Sum of all SAVINGS
     const transactions = await Transaction.findAll({ where: { userId } });
-    
+
     let totalBalance = 0;
     let monthlyIncome = 0;
     let monthlyExpenses = 0;

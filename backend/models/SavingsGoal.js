@@ -38,6 +38,10 @@ const SavingsGoal = sequelize.define('SavingsGoal', {
   isCompleted: {
     type: DataTypes.BOOLEAN,
     defaultValue: false
+  },
+  lastApplied: {
+    type: DataTypes.STRING,
+    allowNull: true
   }
 });
 

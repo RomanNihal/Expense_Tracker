@@ -21,6 +21,10 @@ const FixedExpense = sequelize.define('FixedExpense', {
   },
   description: {
     type: DataTypes.STRING
+  },
+  lastApplied: {
+    type: DataTypes.STRING,
+    allowNull: true
   }
 });
 

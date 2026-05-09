@@ -18,6 +18,10 @@ const FixedIncome = sequelize.define('FixedIncome', {
   amount: {
     type: DataTypes.DECIMAL(12, 2),
     allowNull: false
+  },
+  lastApplied: {
+    type: DataTypes.STRING,
+    allowNull: true
   }
 });
 

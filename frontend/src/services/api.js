@@ -54,7 +54,8 @@ export const savingsService = {
   getSavingsData: () => api.get('/savings'),
   addLog: (data) => api.post('/savings/log', data),
   completeGoal: (id) => api.put(`/savings/goal/${id}/complete`),
-  extendGoal: (id, months) => api.put(`/savings/goal/${id}/extend`, { targetMonths: months })
+  extendGoal: (id, months) => api.put(`/savings/goal/${id}/extend`, { targetMonths: months }),
+  deleteGoal: (id) => api.delete(`/savings-goals/${id}`)
 };
 
 

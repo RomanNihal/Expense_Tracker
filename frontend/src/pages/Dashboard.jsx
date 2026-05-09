@@ -209,7 +209,7 @@ const Dashboard = () => {
 
           <div style={{ display: 'grid', gap: '0.75rem' }}>
             {(data.activeGoals || []).slice(0, 3).map(goal => (
-              <div key={goal.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', padding: '0.5rem', background: 'rgba(255,255,255,0.02)', borderRadius: '0.5rem' }}>
+              <div key={goal.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.875rem', padding: '0.5rem', background: 'rgba(255,255,255,0.02)', borderRadius: '0.5rem' }}>
                 <span style={{ color: 'var(--text-muted)' }}>{goal.name}</span>
                 <span style={{ fontWeight: 600 }}>${parseFloat(goal.monthlySavings).toFixed(0)}</span>
               </div>

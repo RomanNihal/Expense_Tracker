@@ -52,7 +52,7 @@ exports.getDailyExpenses = async (req, res) => {
   try {
     const { date, month, type } = req.query; // date in query can stay 'date' as a param name
     const where = { userId: req.user.id };
-    
+
     if (date) {
       where.expenseDate = date;
     } else if (month) {
@@ -63,9 +63,9 @@ exports.getDailyExpenses = async (req, res) => {
       where.type = type;
     }
 
-    const transactions = await Transaction.findAll({ 
-      where, 
-      order: [['expenseDate', 'DESC'], ['createdAt', 'DESC']] 
+    const transactions = await Transaction.findAll({
+      where,
+      order: [['expenseDate', 'DESC'], ['createdAt', 'DESC']]
     });
     res.json({ success: true, data: transactions });
   } catch (error) {
@@ -76,10 +76,10 @@ exports.getDailyExpenses = async (req, res) => {
 exports.addDailyExpense = async (req, res) => {
   try {
     const { name, amount, expenseDate, type } = req.body;
-    const transaction = await Transaction.create({ 
-      userId: req.user.id, 
-      name, 
-      amount, 
+    const transaction = await Transaction.create({
+      userId: req.user.id,
+      name,
+      amount,
       expenseDate: expenseDate || new Date().toISOString().split('T')[0],
       type: type || 'EXPENSE'
     });
@@ -92,7 +92,26 @@ exports.addDailyExpense = async (req, res) => {
 
 exports.deleteDailyExpense = async (req, res) => {
   try {
-    await Transaction.destroy({ where: { id: req.params.id, userId: req.user.id } });
+    const expense = await Transaction.findOne({ where: { id: req.params.id, userId: req.user.id } });
+    if (expense) {
+      const { name, type } = expense;
+
+      if (name.startsWith('Savings: ') && type === 'SAVINGS') {
+        const goalName = name.replace('Savings: ', '');
+        const { SavingsGoal } = require('../models');
+        await SavingsGoal.update({ isActive: false }, { where: { userId: req.user.id, name: goalName } });
+      } else if (name.startsWith('Fixed: ') && type === 'EXPENSE') {
+        const expName = name.replace('Fixed: ', '');
+        const { FixedExpense } = require('../models');
+        await FixedExpense.destroy({ where: { userId: req.user.id, name: expName } });
+      } else if (name.startsWith('Fixed: ') && type === 'INCOME') {
+        const incSource = name.replace('Fixed: ', '');
+        const { FixedIncome } = require('../models');
+        await FixedIncome.destroy({ where: { userId: req.user.id, source: incSource } });
+      }
+
+      await expense.destroy();
+    }
     res.json({ success: true, message: 'Deleted successfully' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -103,7 +122,7 @@ exports.updateDailyExpense = async (req, res) => {
   try {
     const { name, amount, expenseDate, type } = req.body;
     console.log(`Updating Transaction ID: ${req.params.id} for User: ${req.user.id}`);
-    
+
     const [updated] = await Transaction.update(
       { name, amount, expenseDate, type },
       { where: { id: parseInt(req.params.id), userId: req.user.id } }
@@ -113,7 +132,36 @@ exports.updateDailyExpense = async (req, res) => {
       console.log('No rows updated. Check if ID exists and belongs to user.');
       return res.status(404).json({ success: false, error: 'Transaction not found or unauthorized' });
     }
-    
+
+    // Auto-update underlying rules if this is a system-generated transaction
+    if (name) {
+      if (name.startsWith('Savings: ') && type === 'SAVINGS') {
+        const goalName = name.replace('Savings: ', '');
+        const { SavingsGoal } = require('../models');
+        const goal = await SavingsGoal.findOne({ where: { userId: req.user.id, name: goalName, isActive: true } });
+        if (goal) {
+          goal.monthlySavings = amount;
+          goal.targetAmount = amount * goal.targetMonths;
+          await goal.save();
+        }
+
+      } else if (name.startsWith('Fixed: ') && type === 'EXPENSE') {
+        const expName = name.replace('Fixed: ', '');
+        const { FixedExpense } = require('../models');
+        await FixedExpense.update(
+          { amount: amount },
+          { where: { userId: req.user.id, name: expName } }
+        );
+      } else if (name.startsWith('Fixed: ') && type === 'INCOME') {
+        const incSource = name.replace('Fixed: ', '');
+        const { FixedIncome } = require('../models');
+        await FixedIncome.update(
+          { amount: amount },
+          { where: { userId: req.user.id, source: incSource } }
+        );
+      }
+    }
+
     res.json({ success: true, message: 'Updated successfully' });
   } catch (error) {
     console.error('Update Error:', error.message);
