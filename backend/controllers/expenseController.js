@@ -96,11 +96,7 @@ exports.deleteDailyExpense = async (req, res) => {
     if (expense) {
       const { name, type } = expense;
 
-      if (name.startsWith('Savings: ') && type === 'SAVINGS') {
-        const goalName = name.replace('Savings: ', '');
-        const { SavingsGoal } = require('../models');
-        await SavingsGoal.update({ isActive: false }, { where: { userId: req.user.id, name: goalName } });
-      } else if (name.startsWith('Fixed: ') && type === 'EXPENSE') {
+      if (name.startsWith('Fixed: ') && type === 'EXPENSE') {
         const expName = name.replace('Fixed: ', '');
         const { FixedExpense } = require('../models');
         await FixedExpense.destroy({ where: { userId: req.user.id, name: expName } });

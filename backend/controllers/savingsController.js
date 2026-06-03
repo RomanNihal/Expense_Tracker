@@ -1,14 +1,13 @@
-const { SavingsGoal, SavingLog, Transaction } = require('../models');
+const { SavingsGoal, SavingLog } = require('../models');
 
 exports.getSavingsData = async (req, res) => {
   try {
     const goals = await SavingsGoal.findAll({ where: { userId: req.user.id } });
-    const logs = await SavingLog.findAll({ 
+    const logs = await SavingLog.findAll({
       where: { userId: req.user.id },
       order: [['date', 'DESC'], ['createdAt', 'DESC']]
     });
 
-    // Calculate total savings balance
     const totalSavings = logs.reduce((acc, log) => {
       if (log.type === 'DEPOSIT' || log.type === 'GOAL_COMPLETION') return acc + parseFloat(log.amount);
       if (log.type === 'WITHDRAWAL') return acc - parseFloat(log.amount);
@@ -37,17 +36,43 @@ exports.addSavingLog = async (req, res) => {
   }
 };
 
+exports.updateSavingLog = async (req, res) => {
+  try {
+    const { amount, description } = req.body;
+    const log = await SavingLog.findOne({ where: { id: req.params.id, userId: req.user.id } });
+    if (!log) return res.status(404).json({ success: false, error: 'Log not found' });
+
+    if (amount !== undefined) log.amount = amount;
+    if (description !== undefined) log.description = description;
+    await log.save();
+
+    res.json({ success: true, data: log });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+exports.deleteSavingLog = async (req, res) => {
+  try {
+    const log = await SavingLog.findOne({ where: { id: req.params.id, userId: req.user.id } });
+    if (!log) return res.status(404).json({ success: false, error: 'Log not found' });
+
+    await log.destroy();
+    res.json({ success: true, message: 'Log deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
 exports.completeGoal = async (req, res) => {
   try {
     const goal = await SavingsGoal.findOne({ where: { id: req.params.id, userId: req.user.id } });
     if (!goal) return res.status(404).json({ success: false, error: 'Goal not found' });
 
-    // Mark as completed
     goal.isCompleted = true;
     goal.isActive = false;
     await goal.save();
 
-    // Log the completion as a deposit into general savings
     await SavingLog.create({
       userId: req.user.id,
       amount: goal.targetAmount,
@@ -62,18 +87,39 @@ exports.completeGoal = async (req, res) => {
   }
 };
 
-exports.updateGoalTime = async (req, res) => {
+// Smart extend: logs already-saved portion to vault, updates goal with remaining amount & new months
+exports.extendGoal = async (req, res) => {
   try {
-    const { targetMonths } = req.body;
+    const { remainingAmount, newMonths } = req.body;
     const goal = await SavingsGoal.findOne({ where: { id: req.params.id, userId: req.user.id } });
     if (!goal) return res.status(404).json({ success: false, error: 'Goal not found' });
 
-    goal.targetMonths = targetMonths;
-    // Recalculate monthly savings needed?
-    // User said: "remaining money needed to fullfill that target will be substracted from the next months money"
-    // This implies we need to know how much is already saved.
-    
+    const completedAmount = parseFloat(goal.targetAmount) - parseFloat(remainingAmount);
+
+    // Log the portion already saved into the vault
+    if (completedAmount > 0) {
+      await SavingLog.create({
+        userId: req.user.id,
+        amount: completedAmount,
+        description: `Partial Save: ${goal.name}`,
+        type: 'GOAL_COMPLETION',
+        date: new Date()
+      });
+    }
+
+    // Reset the goal for the extension period
+    const now = new Date();
+    const currentMonthStr = now.toISOString().slice(0, 7);
+
+    goal.targetAmount = parseFloat(remainingAmount);
+    goal.targetMonths = parseInt(newMonths);
+    goal.monthlySavings = parseFloat(remainingAmount) / parseInt(newMonths);
+    goal.startMonth = currentMonthStr;
+    goal.lastApplied = currentMonthStr; // don't apply this month immediately
+    goal.isActive = true;
+    goal.isCompleted = false;
     await goal.save();
+
     res.json({ success: true, data: goal });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });

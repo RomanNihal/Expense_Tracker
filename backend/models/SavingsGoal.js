@@ -42,6 +42,10 @@ const SavingsGoal = sequelize.define('SavingsGoal', {
   lastApplied: {
     type: DataTypes.STRING,
     allowNull: true
+  },
+  startMonth: {
+    type: DataTypes.STRING(7),
+    allowNull: true
   }
 });
 

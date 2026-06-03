@@ -53,8 +53,10 @@ export const expenseService = {
 export const savingsService = {
   getSavingsData: () => api.get('/savings'),
   addLog: (data) => api.post('/savings/log', data),
+  updateLog: (id, data) => api.put(`/savings/log/${id}`, data),
+  deleteLog: (id) => api.delete(`/savings/log/${id}`),
   completeGoal: (id) => api.put(`/savings/goal/${id}/complete`),
-  extendGoal: (id, months) => api.put(`/savings/goal/${id}/extend`, { targetMonths: months }),
+  extendGoal: (id, data) => api.put(`/savings/goal/${id}/extend`, data),
   deleteGoal: (id) => api.delete(`/savings-goals/${id}`)
 };
 

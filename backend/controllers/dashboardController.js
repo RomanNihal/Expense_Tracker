@@ -53,10 +53,19 @@ const autoApplyFixedItems = async (userId) => {
       await item.save();
     }
 
-    // 3. Apply Savings Goals
+    // 3. Apply Savings Goals (skip overdue ones)
     const activeGoals = await SavingsGoal.findAll({ where: { userId, isActive: true, isCompleted: false } });
     for (const goal of activeGoals) {
       if (goal.lastApplied === currentMonthStr) continue;
+
+      // Check if goal period has elapsed — skip if overdue
+      const startMonthStr = goal.startMonth || goal.createdAt?.toISOString?.().slice(0, 7) || goal.createdAt?.slice(0, 7);
+      if (startMonthStr) {
+        const [sy, sm] = startMonthStr.split('-').map(Number);
+        const [cy, cm] = currentMonthStr.split('-').map(Number);
+        const monthsElapsed = (cy * 12 + cm) - (sy * 12 + sm);
+        if (monthsElapsed >= goal.targetMonths) continue;
+      }
 
       const itemName = `Savings: ${goal.name}`;
       await Transaction.create({

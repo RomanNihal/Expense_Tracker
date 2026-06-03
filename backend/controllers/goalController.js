@@ -17,13 +17,17 @@ exports.addGoal = async (req, res) => {
     
     // Removed: Deactivating previous goals. Multiple goals are now supported.
 
-    const goal = await SavingsGoal.create({ 
-      userId: req.user.id, 
-      name, 
-      targetAmount, 
-      targetMonths, 
+    const now = new Date();
+    const currentMonthStr = now.toISOString().slice(0, 7);
+
+    const goal = await SavingsGoal.create({
+      userId: req.user.id,
+      name,
+      targetAmount,
+      targetMonths,
       monthlySavings,
-      isActive: true
+      isActive: true,
+      startMonth: currentMonthStr
     });
     res.status(201).json({ success: true, data: goal });
   } catch (error) {

@@ -26,6 +26,14 @@ async function migrate() {
       });
     }
 
+    if (!tableInfo.startMonth) {
+      console.log('Adding startMonth to SavingsGoals...');
+      await queryInterface.addColumn('SavingsGoals', 'startMonth', {
+        type: DataTypes.STRING(7),
+        allowNull: true
+      });
+    }
+
     console.log('Migration completed successfully!');
     process.exit(0);
   } catch (err) {
