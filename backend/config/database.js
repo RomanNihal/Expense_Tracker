@@ -1,6 +1,10 @@
 const { Sequelize } = require('sequelize');
 const path = require('path');
 
+// Explicitly require pg so Vercel's bundler includes it in the deployment
+try { require('pg'); } catch(e) {}
+try { require('pg-hstore'); } catch(e) {}
+
 let sequelize;
 
 // Vercel Postgres sets POSTGRES_URL; Railway sets DATABASE_URL
