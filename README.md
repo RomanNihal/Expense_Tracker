@@ -2,6 +2,8 @@
 
 A personal finance tracker to manage your wallet, savings goals, and monthly spending — all in one clean dark UI.
 
+🌐 **Live App:** [https://expense-tracker-iusl.vercel.app](https://expense-tracker-iusl.vercel.app)
+
 ---
 
 ## Features
