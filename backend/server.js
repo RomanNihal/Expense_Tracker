@@ -10,7 +10,10 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors());
+const allowedOrigins = process.env.FRONTEND_URL
+  ? [process.env.FRONTEND_URL, 'http://localhost:5173', 'http://localhost:3000']
+  : '*';
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json());
 
 // Routes
@@ -22,26 +25,24 @@ app.use('/api/transactions', require('./routes/transactions'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/savings', require('./routes/savings'));
 
-
-
 // Global Error Handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({
-    success: false,
-    error: err.message || 'Internal Server Error'
-  });
+  res.status(500).json({ success: false, error: err.message || 'Internal Server Error' });
 });
 
-// Sync Database and Start Server
-sequelize.sync() // Use standard sync for SQLite stability
+// Local development: start server directly
+if (require.main === module) {
+  sequelize.sync()
+    .then(() => {
+      console.log('Database synced successfully');
+      app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
+    })
+    .catch(err => console.error('Unable to sync database:', err));
+} else {
+  // Vercel serverless: sync DB then export
+  sequelize.sync().catch(err => console.error('DB sync error:', err));
+}
 
-  .then(() => {
-    console.log('Database synced successfully');
-    app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-    });
-  })
-  .catch(err => {
-    console.error('Unable to sync database:', err);
-  });
+// Required for Vercel serverless functions
+module.exports = app;

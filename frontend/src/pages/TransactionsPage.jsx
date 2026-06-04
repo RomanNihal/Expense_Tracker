@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { expenseService } from '../services/api';
-import { 
-  Trash2, 
-  Calendar, 
-  Search, 
-  Filter, 
-  ArrowUpCircle, 
+import {
+  Trash2,
+  Search,
+  ArrowUpCircle,
   TrendingDown,
   Settings,
   Edit2,
   Save,
-  X
+  X,
+  TrendingUp,
+  PiggyBank
 } from 'lucide-react';
 
 
@@ -21,7 +21,7 @@ const TransactionsPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('ALL');
-  const [sortOrder, setSortOrder] = useState('DESC');
+  const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7));
 
   // Editing state for fixed items (Sidebar)
   const [editingId, setEditingId] = useState(null);
@@ -116,86 +116,182 @@ const TransactionsPage = () => {
 
 
 
+  // Build per-month totals from all transactions (unfiltered)
+  const monthlyHistory = (() => {
+    const map = {};
+    transactions.forEach(t => {
+      const month = (t.expenseDate || '').slice(0, 7);
+      if (!month) return;
+      if (!map[month]) map[month] = { income: 0, expenses: 0, savings: 0 };
+      const amt = parseFloat(t.amount) || 0;
+      if (t.type === 'INCOME') map[month].income += amt;
+      else if (t.type === 'EXPENSE') map[month].expenses += amt;
+      else if (t.type === 'SAVINGS') map[month].savings += amt;
+    });
+    return Object.entries(map).sort(([a], [b]) => b.localeCompare(a));
+  })();
+
+  const formatMonth = (ym) => {
+    if (!ym) return '';
+    const [y, m] = ym.split('-');
+    return new Date(parseInt(y), parseInt(m) - 1).toLocaleString('default', { month: 'short', year: 'numeric' });
+  };
+
   const filteredTransactions = transactions
     .filter(t => {
       const matchesSearch = (t.name || '').toLowerCase().includes(searchTerm.toLowerCase());
       const matchesFilter = filterType === 'ALL' || t.type === filterType;
-      return matchesSearch && matchesFilter;
+      const matchesMonth = !selectedMonth || (t.expenseDate || '').startsWith(selectedMonth);
+      return matchesSearch && matchesFilter && matchesMonth;
     })
 
-    .sort((a, b) => {
-      const dateA = new Date(a.expenseDate);
-      const dateB = new Date(b.expenseDate);
-      return sortOrder === 'DESC' ? dateB - dateA : dateA - dateB;
-    });
+    .sort((a, b) => new Date(b.expenseDate) - new Date(a.expenseDate));
 
   if (loading) return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading ledger...</div>;
 
   return (
-    <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem' }} className="animate-fade-in">
-      <header style={{ marginBottom: '3rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-        <div>
-          <h1 style={{ fontSize: '3rem', fontWeight: 900, letterSpacing: '-0.03em', marginBottom: '0.5rem' }}>Your Wallet</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>Transaction history and recurring settings</p>
-        </div>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <div style={{ 
-            background: 'rgba(255, 255, 255, 0.05)', 
-            border: '1px solid var(--glass-border)',
-            borderRadius: '0.75rem',
-            padding: '0.75rem 1.25rem', 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '0.75rem',
-            width: '320px',
-            backdropFilter: 'blur(10px)'
-          }}>
-            <Search size={20} color="var(--text-muted)" />
-            <input 
-              type="text" 
-              placeholder="Search by description..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ 
-                background: 'none', 
-                border: 'none', 
-                color: 'white', 
-                outline: 'none',
-                width: '100%',
-                fontSize: '1rem'
-              }}
-            />
-          </div>
-
-          <select 
-            className="custom-select"
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
-          >
-
-            <option value="ALL" style={{ background: 'var(--bg)' }}>All Activities</option>
-            <option value="INCOME" style={{ background: 'var(--bg)' }}>Income Only</option>
-            <option value="EXPENSE" style={{ background: 'var(--bg)' }}>Expenses Only</option>
-            <option value="SAVINGS" style={{ background: 'var(--bg)' }}>Savings Only</option>
-          </select>
-        </div>
+    <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem' }} className="animate-fade-in page-outer">
+      <header style={{ marginBottom: '3rem' }}>
+        <h1 style={{ fontSize: '3rem', fontWeight: 900, letterSpacing: '-0.03em', marginBottom: '0.5rem' }}>Your Wallet</h1>
+        <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>Transaction history and recurring settings</p>
       </header>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '2rem' }}>
+      {/* Monthly Overview */}
+      {monthlyHistory.length > 0 && (
+        <div style={{ marginBottom: '2.5rem' }}>
+          <div style={{ marginBottom: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Monthly Breakdown</span>
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', opacity: 0.6 }}>— click a card to filter</span>
+          </div>
+          <div style={{ display: 'flex', gap: '0.875rem', overflowX: 'auto', paddingBottom: '0.75rem' }}>
+            {monthlyHistory.map(([month, totals]) => {
+              const net = totals.income - totals.expenses - totals.savings;
+              const isActive = selectedMonth === month;
+              const netColor = net >= 0 ? '#10b981' : '#ef4444';
+              return (
+                <div
+                  key={month}
+                  onClick={() => setSelectedMonth(isActive ? '' : month)}
+                  style={{
+                    minWidth: '185px',
+                    borderRadius: '1rem',
+                    overflow: 'hidden',
+                    border: `1px solid ${isActive ? 'var(--primary)' : 'rgba(255,255,255,0.07)'}`,
+                    background: isActive ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.03)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    flexShrink: 0,
+                    boxShadow: isActive ? '0 0 0 1px var(--primary)' : 'none'
+                  }}
+                >
+                  {/* Top accent bar */}
+                  <div style={{ height: '3px', background: net >= 0 ? 'linear-gradient(90deg,#10b981,#34d399)' : 'linear-gradient(90deg,#ef4444,#f87171)' }} />
+
+                  {/* Month header */}
+                  <div style={{ padding: '0.875rem 1.1rem 0.75rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div style={{ fontSize: '0.95rem', fontWeight: 800, color: isActive ? 'var(--primary)' : 'white', letterSpacing: '-0.01em' }}>
+                      {formatMonth(month)}
+                    </div>
+                  </div>
+
+                  {/* Stats */}
+                  <div style={{ padding: '0.75rem 1.1rem', display: 'grid', gap: '0.45rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <TrendingUp size={11} color="#10b981" />
+                        <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.55)' }}>Income</span>
+                      </div>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#10b981' }}>+${totals.income.toLocaleString()}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <TrendingDown size={11} color="#ef4444" />
+                        <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.55)' }}>Expenses</span>
+                      </div>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#ef4444' }}>-${totals.expenses.toLocaleString()}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <PiggyBank size={11} color="#818cf8" />
+                        <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.55)' }}>Savings</span>
+                      </div>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#818cf8' }}>-${totals.savings.toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  {/* Net footer */}
+                  <div style={{ padding: '0.6rem 1.1rem', background: net >= 0 ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Net</span>
+                    <span style={{ fontSize: '0.9rem', fontWeight: 800, color: netColor }}>
+                      {net >= 0 ? '+' : ''}${Math.abs(net).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <div className="two-col-layout">
         {/* Main List */}
         <div className="glass-card" style={{ padding: '0', overflow: 'hidden' }}>
-          <div style={{ padding: '1.5rem 2rem', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)' }}>
-            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>Ledger History</h3>
-            <button 
-              onClick={() => setSortOrder(sortOrder === 'DESC' ? 'ASC' : 'DESC')}
-              style={{ background: 'rgba(99, 102, 241, 0.1)', border: 'none', color: 'var(--primary)', padding: '0.5rem 1rem', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem', transition: 'all 0.2s' }}
-            >
-              <Calendar size={16} />
-              {sortOrder === 'DESC' ? 'Newest First' : 'Oldest First'}
-            </button>
+          <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.02)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>Ledger History</h3>
+              <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                {/* Search */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: '0.5rem' }}>
+                  <Search size={14} color="var(--text-muted)" />
+                  <input
+                    type="text"
+                    placeholder="Search..."
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    style={{ background: 'none', border: 'none', color: 'white', outline: 'none', fontSize: '0.875rem', width: '130px' }}
+                  />
+                </div>
+                {/* Type filter */}
+                <select
+                  className="custom-select"
+                  value={filterType}
+                  onChange={e => setFilterType(e.target.value)}
+                  style={{ padding: '0.4rem 0.75rem', fontSize: '0.875rem' }}
+                >
+                  <option value="ALL" style={{ background: 'var(--bg)' }}>All Types</option>
+                  <option value="INCOME" style={{ background: 'var(--bg)' }}>Income</option>
+                  <option value="EXPENSE" style={{ background: 'var(--bg)' }}>Expenses</option>
+                  <option value="SAVINGS" style={{ background: 'var(--bg)' }}>Savings</option>
+                </select>
+                {/* Month filter */}
+                <input
+                  type="month"
+                  value={selectedMonth}
+                  onChange={e => setSelectedMonth(e.target.value)}
+                  style={{ padding: '0.4rem 0.75rem', background: 'rgba(255,255,255,0.07)', border: '1px solid var(--glass-border)', borderRadius: '0.5rem', color: 'white', fontSize: '0.875rem', outline: 'none', cursor: 'pointer' }}
+                />
+                {/* Always-visible All toggle */}
+                <button
+                  onClick={() => setSelectedMonth('')}
+                  style={{
+                    padding: '0.4rem 0.85rem',
+                    borderRadius: '0.5rem',
+                    cursor: 'pointer',
+                    fontSize: '0.82rem',
+                    fontWeight: !selectedMonth ? 700 : 500,
+                    border: `1px solid ${!selectedMonth ? 'var(--primary)' : 'var(--glass-border)'}`,
+                    background: !selectedMonth ? 'rgba(99,102,241,0.18)' : 'rgba(255,255,255,0.05)',
+                    color: !selectedMonth ? 'var(--primary)' : 'var(--text-muted)',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  All
+                </button>
+              </div>
+            </div>
           </div>
           
-          <div style={{ overflowX: 'auto' }}>
+          <div className="table-scroll" style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.1em', background: 'rgba(255,255,255,0.01)' }}>

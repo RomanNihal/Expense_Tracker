@@ -38,12 +38,13 @@ exports.addSavingLog = async (req, res) => {
 
 exports.updateSavingLog = async (req, res) => {
   try {
-    const { amount, description } = req.body;
+    const { amount, description, date } = req.body;
     const log = await SavingLog.findOne({ where: { id: req.params.id, userId: req.user.id } });
     if (!log) return res.status(404).json({ success: false, error: 'Log not found' });
 
     if (amount !== undefined) log.amount = amount;
     if (description !== undefined) log.description = description;
+    if (date !== undefined) log.date = date;
     await log.save();
 
     res.json({ success: true, data: log });

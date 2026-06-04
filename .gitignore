@@ -22,6 +22,10 @@ backend/database.sqlite-journal
 backend/database.sqlite-wal
 backend/database.sqlite-shm
 
+# Exported data — contains personal financial data, keep off public repos
+# Remove this line only if your GitHub repo is PRIVATE
+backend/exports/
+
 # Scratch
 scratch/
 db-tools.js

@@ -1,16 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { expenseService } from '../services/api';
 import { Link } from 'react-router-dom';
-import { 
-  Plus, 
-  Trash2, 
-  Target, 
-  TrendingDown, 
-  ArrowUpCircle, 
-  History, 
-  Wallet, 
+import {
+  Plus,
+  Target,
+  TrendingDown,
+  ArrowUpCircle,
+  Wallet,
   Settings,
-  ArrowRight,
   PiggyBank
 } from 'lucide-react';
 
@@ -75,11 +72,6 @@ const Dashboard = () => {
     fetchData();
   };
 
-  const deleteTransaction = async (id) => {
-    await expenseService.deleteTransaction(id);
-    fetchData();
-  };
-
   if (loading) return (
     <div style={{ height: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div className="animate-pulse" style={{ textAlign: 'center' }}>
@@ -98,13 +90,13 @@ const Dashboard = () => {
 
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto' }}>
+    <div className="page-outer" style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto' }}>
       <header style={{ marginBottom: '2.5rem' }}>
         <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '0.5rem' }}>Dashboard</h1>
         <p style={{ color: 'var(--text-muted)' }}>Welcome back! Here's your financial overview.</p>
       </header>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '1.5rem' }}>
+      <div className="dash-12" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '1.5rem' }}>
         
         {/* Main Wallet Card */}
         <div className="glass-card" style={{ 
@@ -349,67 +341,6 @@ const Dashboard = () => {
             </div>
             <button type="submit" className="btn btn-outline" style={{ width: '100%', justifyContent: 'center' }}>Set New Goal</button>
           </form>
-        </div>
-
-        <div className="glass-card" style={{ gridColumn: 'span 8' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <History size={20} color="var(--primary)" />
-              Recent Activity
-            </h3>
-            <Link to="/transactions" style={{ color: 'var(--primary)', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-              View All <ArrowRight size={14} />
-            </Link>
-          </div>
-          <div style={{ display: 'grid', gap: '0.75rem' }}>
-            {data.recentTransactions.slice(0, 4).map(t => (
-              <div key={t.id} style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center',
-                padding: '1rem', 
-                background: 'rgba(255,255,255,0.02)',
-                borderRadius: '0.75rem',
-                border: '1px solid var(--glass-border)'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <div style={{ 
-                    width: '40px', 
-                    height: '40px', 
-                    borderRadius: '50%', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    background: t.type === 'INCOME' ? 'rgba(16, 185, 129, 0.1)' : t.type === 'EXPENSE' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(99, 102, 241, 0.1)',
-                    color: t.type === 'INCOME' ? 'var(--accent)' : t.type === 'EXPENSE' ? 'var(--danger)' : 'var(--primary)'
-                  }}>
-                    {t.type === 'INCOME' ? <ArrowUpCircle size={20}/> : <TrendingDown size={20}/>}
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 600 }}>{t.name}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t.expenseDate}</div>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                  <span style={{ 
-                    fontSize: '1.1rem',
-                    fontWeight: 700, 
-                    color: t.type === 'INCOME' ? 'var(--accent)' : 'var(--danger)' 
-                  }}>
-                    {t.type === 'INCOME' ? '+' : '-'}${parseFloat(t.amount).toFixed(2)}
-                  </span>
-                  {!t.isFixed && (
-                    <button 
-                      onClick={() => deleteTransaction(t.id)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem', color: 'var(--text-muted)' }}
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
 
       </div>

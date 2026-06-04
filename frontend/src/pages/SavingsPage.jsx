@@ -35,9 +35,12 @@ const SavingsPage = () => {
   const [showLogForm, setShowLogForm] = useState(false);
   const [logForm, setLogForm] = useState({ amount: '', description: '', type: 'DEPOSIT' });
 
+  // Month filter for vault transactions
+  const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7));
+
   // Edit vault log
   const [editLogId, setEditLogId] = useState(null);
-  const [editLogForm, setEditLogForm] = useState({ amount: '', description: '' });
+  const [editLogForm, setEditLogForm] = useState({ amount: '', description: '', date: '' });
 
   // Extend goal modal
   const [extendGoalId, setExtendGoalId] = useState(null);
@@ -96,7 +99,7 @@ const SavingsPage = () => {
 
   const handleEditLog = (log) => {
     setEditLogId(log.id);
-    setEditLogForm({ amount: log.amount, description: log.description });
+    setEditLogForm({ amount: log.amount, description: log.description, date: log.date });
   };
 
   const handleEditLogSubmit = async (e) => {
@@ -117,12 +120,36 @@ const SavingsPage = () => {
 
   const activeGoals = data.goals.filter(g => g.isActive && !g.isCompleted);
   const completedGoals = data.goals.filter(g => g.isCompleted);
+  const filteredLogs = selectedMonth
+    ? data.logs.filter(l => (l.date || '').startsWith(selectedMonth))
+    : data.logs;
+
+  const formatMonth = (ym) => {
+    if (!ym) return '';
+    const [y, m] = ym.split('-');
+    return new Date(parseInt(y), parseInt(m) - 1).toLocaleString('default', { month: 'short', year: 'numeric' });
+  };
+
+  // Per-month vault totals for the breakdown cards
+  const vaultMonthlyHistory = (() => {
+    const map = {};
+    data.logs.forEach(log => {
+      const month = (log.date || '').slice(0, 7);
+      if (!month) return;
+      if (!map[month]) map[month] = { deposits: 0, withdrawals: 0, completions: 0 };
+      const amt = parseFloat(log.amount) || 0;
+      if (log.type === 'DEPOSIT') map[month].deposits += amt;
+      else if (log.type === 'WITHDRAWAL') map[month].withdrawals += amt;
+      else if (log.type === 'GOAL_COMPLETION') map[month].completions += amt;
+    });
+    return Object.entries(map).sort(([a], [b]) => b.localeCompare(a));
+  })();
 
   // Goal whose extend modal is open
   const extendGoalData = extendGoalId ? data.goals.find(g => g.id === extendGoalId) : null;
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
+    <div className="page-outer" style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
       <header style={{ marginBottom: '2.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '0.5rem' }}>Savings Vault</h1>
@@ -136,7 +163,76 @@ const SavingsPage = () => {
         </div>
       </header>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '2rem' }}>
+      {/* Vault Monthly Breakdown */}
+      {vaultMonthlyHistory.length > 0 && (
+        <div style={{ marginBottom: '2.5rem' }}>
+          <div style={{ marginBottom: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Vault Monthly Breakdown</span>
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', opacity: 0.6 }}>— click a card to filter</span>
+          </div>
+          <div style={{ display: 'flex', gap: '0.875rem', overflowX: 'auto', paddingBottom: '0.75rem' }}>
+            {vaultMonthlyHistory.map(([month, totals]) => {
+              const net = totals.deposits + totals.completions - totals.withdrawals;
+              const isActive = selectedMonth === month;
+              return (
+                <div
+                  key={month}
+                  onClick={() => setSelectedMonth(isActive ? '' : month)}
+                  style={{
+                    minWidth: '185px',
+                    borderRadius: '1rem',
+                    overflow: 'hidden',
+                    border: `1px solid ${isActive ? 'var(--primary)' : 'rgba(255,255,255,0.07)'}`,
+                    background: isActive ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.03)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    flexShrink: 0,
+                    boxShadow: isActive ? '0 0 0 1px var(--primary)' : 'none'
+                  }}
+                >
+                  <div style={{ height: '3px', background: net >= 0 ? 'linear-gradient(90deg,#10b981,#34d399)' : 'linear-gradient(90deg,#ef4444,#f87171)' }} />
+                  <div style={{ padding: '0.875rem 1.1rem 0.75rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div style={{ fontSize: '0.95rem', fontWeight: 800, color: isActive ? 'var(--primary)' : 'white', letterSpacing: '-0.01em' }}>
+                      {formatMonth(month)}
+                    </div>
+                  </div>
+                  <div style={{ padding: '0.75rem 1.1rem', display: 'grid', gap: '0.45rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <ArrowUpCircle size={11} color="#10b981" />
+                        <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.55)' }}>Deposits</span>
+                      </div>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#10b981' }}>+${totals.deposits.toLocaleString()}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <ArrowDownCircle size={11} color="#ef4444" />
+                        <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.55)' }}>Withdrawals</span>
+                      </div>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#ef4444' }}>-${totals.withdrawals.toLocaleString()}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <CheckCircle2 size={11} color="#818cf8" />
+                        <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.55)' }}>Goals</span>
+                      </div>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#818cf8' }}>+${totals.completions.toLocaleString()}</span>
+                    </div>
+                  </div>
+                  <div style={{ padding: '0.6rem 1.1rem', background: net >= 0 ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Net</span>
+                    <span style={{ fontSize: '0.9rem', fontWeight: 800, color: net >= 0 ? '#10b981' : '#ef4444' }}>
+                      {net >= 0 ? '+' : ''}${Math.abs(net).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <div className="savings-layout">
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
 
           {/* Active Goals */}
@@ -205,12 +301,41 @@ const SavingsPage = () => {
 
           {/* Vault Transactions */}
           <section>
-            <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <History size={24} color="var(--primary)" />
-              Vault Transactions
-            </h3>
-            <div className="glass-card" style={{ padding: '0' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <div className="glass-card" style={{ padding: '0', overflow: 'hidden' }}>
+              {/* Card header with filters — identical layout to wallet ledger */}
+              <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.02)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+                  <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <History size={20} color="var(--primary)" />
+                    Vault Transactions
+                  </h3>
+                  <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <input
+                      type="month"
+                      value={selectedMonth}
+                      onChange={e => setSelectedMonth(e.target.value)}
+                      style={{ padding: '0.4rem 0.75rem', background: 'rgba(255,255,255,0.07)', border: '1px solid var(--glass-border)', borderRadius: '0.5rem', color: 'white', fontSize: '0.875rem', outline: 'none', cursor: 'pointer' }}
+                    />
+                    <button
+                      onClick={() => setSelectedMonth('')}
+                      style={{
+                        padding: '0.4rem 0.85rem',
+                        borderRadius: '0.5rem',
+                        cursor: 'pointer',
+                        fontSize: '0.82rem',
+                        fontWeight: !selectedMonth ? 700 : 500,
+                        border: `1px solid ${!selectedMonth ? 'var(--primary)' : 'var(--glass-border)'}`,
+                        background: !selectedMonth ? 'rgba(99,102,241,0.18)' : 'rgba(255,255,255,0.05)',
+                        color: !selectedMonth ? 'var(--primary)' : 'var(--text-muted)',
+                        transition: 'all 0.15s'
+                      }}
+                    >
+                      All
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div className="table-scroll"><table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--glass-border)', textAlign: 'left' }}>
                     <th style={{ padding: '1rem' }}>Date</th>
@@ -220,23 +345,30 @@ const SavingsPage = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.logs.map(log => (
+                  {filteredLogs.map(log => (
                     <tr key={log.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
                       {editLogId === log.id ? (
                         <td colSpan={4} style={{ padding: '0.75rem 1rem' }}>
-                          <form onSubmit={handleEditLogSubmit} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                          <form onSubmit={handleEditLogSubmit} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <input
+                              type="date"
+                              value={editLogForm.date}
+                              onChange={e => setEditLogForm({ ...editLogForm, date: e.target.value })}
+                              style={{ padding: '0.4rem 0.6rem', background: 'rgba(255,255,255,0.1)', border: '1px solid var(--primary)', borderRadius: '6px', color: 'white' }}
+                              required
+                            />
                             <input
                               type="number"
                               value={editLogForm.amount}
                               onChange={e => setEditLogForm({ ...editLogForm, amount: e.target.value })}
-                              style={{ width: '110px', padding: '0.4rem 0.6rem', background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', borderRadius: '6px', color: 'white' }}
+                              style={{ width: '110px', padding: '0.4rem 0.6rem', background: 'rgba(255,255,255,0.1)', border: '1px solid var(--primary)', borderRadius: '6px', color: 'white' }}
                               required
                             />
                             <input
                               type="text"
                               value={editLogForm.description}
                               onChange={e => setEditLogForm({ ...editLogForm, description: e.target.value })}
-                              style={{ flex: 1, padding: '0.4rem 0.6rem', background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', borderRadius: '6px', color: 'white' }}
+                              style={{ flex: 1, minWidth: '140px', padding: '0.4rem 0.6rem', background: 'rgba(255,255,255,0.1)', border: '1px solid var(--primary)', borderRadius: '6px', color: 'white' }}
                               required
                             />
                             <button type="submit" className="btn btn-primary" style={{ padding: '0.4rem 0.9rem' }}>Save</button>
@@ -286,43 +418,60 @@ const SavingsPage = () => {
                       )}
                     </tr>
                   ))}
-                  {data.logs.length === 0 && (
+                  {filteredLogs.length === 0 && (
                     <tr>
                       <td colSpan={4} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                        No vault transactions yet.
+                        {selectedMonth ? `No transactions for ${selectedMonth}.` : 'No vault transactions yet.'}
                       </td>
                     </tr>
                   )}
                 </tbody>
-              </table>
+              </table></div>
             </div>
           </section>
         </div>
 
-        {/* Sidebar */}
-        <aside style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          <div className="glass-card">
-            <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem' }}>Quick Vault Action</h3>
-            <div style={{ display: 'grid', gap: '1rem' }}>
+        {/* Sidebar — paddingTop pushes cards to align with goal cards below the "Active Goals" heading */}
+        <aside style={{ display: 'flex', flexDirection: 'column', gap: '2rem', alignSelf: 'flex-start', paddingTop: '3rem' }}>
+          {/* Vault Action Panel — deliberately different from goal cards */}
+          <div style={{ borderRadius: '1rem', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(8,14,28,0.95)' }}>
+            {/* Gradient banner with total */}
+            <div style={{ padding: '1.25rem 1.5rem', background: 'linear-gradient(135deg, rgba(16,185,129,0.18) 0%, rgba(99,102,241,0.18) 100%)', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ width: '46px', height: '46px', borderRadius: '0.875rem', background: 'linear-gradient(135deg,#10b981,#6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <PiggyBank size={22} color="white" />
+              </div>
+              <div>
+                <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.1rem' }}>Total Vault Balance</div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'white', letterSpacing: '-0.02em' }}>
+                  ${parseFloat(data.totalSavings).toLocaleString()}
+                </div>
+              </div>
+            </div>
+            {/* Action buttons with icon blocks */}
+            <div style={{ padding: '1rem 1.1rem', display: 'grid', gap: '0.6rem' }}>
               <button
                 onClick={() => { setLogForm({ ...logForm, type: 'DEPOSIT' }); setShowLogForm(true); }}
-                className="btn btn-primary"
-                style={{ width: '100%', background: 'var(--accent)', justifyContent: 'center' }}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.8rem 1rem', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.22)', borderRadius: '0.75rem', color: '#10b981', cursor: 'pointer', width: '100%', fontSize: '0.9rem', fontWeight: 600 }}
               >
-                <Plus size={20} /> Add Savings
+                <div style={{ width: '30px', height: '30px', background: 'rgba(16,185,129,0.15)', borderRadius: '0.45rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Plus size={15} color="#10b981" />
+                </div>
+                Add to Vault
               </button>
               <button
                 onClick={() => { setLogForm({ ...logForm, type: 'WITHDRAWAL' }); setShowLogForm(true); }}
-                className="btn btn-outline"
-                style={{ width: '100%', borderColor: 'var(--danger)', color: 'var(--danger)', justifyContent: 'center' }}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.8rem 1rem', background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '0.75rem', color: '#ef4444', cursor: 'pointer', width: '100%', fontSize: '0.9rem', fontWeight: 600 }}
               >
-                <ArrowDownCircle size={20} /> Spend from Vault
+                <div style={{ width: '30px', height: '30px', background: 'rgba(239,68,68,0.1)', borderRadius: '0.45rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <ArrowDownCircle size={15} color="#ef4444" />
+                </div>
+                Spend from Vault
               </button>
             </div>
           </div>
 
           {showLogForm && (
-            <div className="glass-card animate-fade-in" style={{ border: '1px solid var(--primary)' }}>
+            <div className="animate-fade-in" style={{ height: 'fit-content', padding: '1.25rem 1.5rem', borderRadius: '1rem', background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.35)' }}>
               <h4 style={{ marginBottom: '1rem' }}>
                 {logForm.type === 'DEPOSIT' ? 'Deposit to Vault' : 'Withdraw from Vault'}
               </h4>
@@ -355,8 +504,11 @@ const SavingsPage = () => {
           )}
 
           {completedGoals.length > 0 && (
-            <div className="glass-card">
-              <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem', color: 'var(--text-muted)' }}>Hall of Fame</h3>
+            <div style={{ height: 'fit-content', padding: '1.25rem 1.5rem', borderRadius: '1rem', background: 'rgba(251,191,36,0.05)', border: '1px solid rgba(251,191,36,0.2)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1rem' }}>
+                <span style={{ fontSize: '1.1rem' }}>🏆</span>
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#fbbf24' }}>Hall of Fame</h3>
+              </div>
               <div style={{ display: 'grid', gap: '0.75rem' }}>
                 {completedGoals.map(goal => (
                   <div key={goal.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.875rem' }}>
