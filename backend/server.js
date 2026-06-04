@@ -31,18 +31,23 @@ app.use((err, req, res, next) => {
   res.status(500).json({ success: false, error: err.message || 'Internal Server Error' });
 });
 
-// Local development: start server directly
+// DB sync promise — resolved once tables are created
+const dbReady = sequelize.sync();
+
 if (require.main === module) {
-  sequelize.sync()
+  // Local development
+  dbReady
     .then(() => {
       console.log('Database synced successfully');
       app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
     })
     .catch(err => console.error('Unable to sync database:', err));
-} else {
-  // Vercel serverless: sync DB then export
-  sequelize.sync().catch(err => console.error('DB sync error:', err));
-}
 
-// Required for Vercel serverless functions
-module.exports = app;
+  module.exports = app;
+} else {
+  // Vercel serverless — wait for DB before handling each request
+  module.exports = async (req, res) => {
+    await dbReady;
+    return app(req, res);
+  };
+}
