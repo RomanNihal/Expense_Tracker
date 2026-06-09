@@ -47,7 +47,8 @@ export const expenseService = {
   updateFixedExpense: (id, data) => api.put(`/fixed-expenses/${id}`, data),
   deleteFixedExpense: (id) => api.delete(`/fixed-expenses/${id}`),
   // Savings Goals
-  addGoal: (data) => api.post('/savings-goals', data)
+  addGoal: (data) => api.post('/savings-goals', data),
+  updateGoal: (id, data) => api.put(`/savings-goals/${id}`, data)
 };
 
 export const savingsService = {

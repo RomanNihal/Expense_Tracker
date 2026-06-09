@@ -12,8 +12,10 @@ import {
   Trash2,
   Pencil,
   X,
-  AlertTriangle
+  AlertTriangle,
+  Save
 } from 'lucide-react';
+import { expenseService } from '../services/api';
 
 // Returns true when a goal's target period has elapsed without completion
 const isGoalOverdue = (goal) => {
@@ -46,6 +48,10 @@ const SavingsPage = () => {
   const [extendGoalId, setExtendGoalId] = useState(null);
   const [extendForm, setExtendForm] = useState({ remainingAmount: '', newMonths: '' });
 
+  // Edit goal modal
+  const [editGoalId, setEditGoalId] = useState(null);
+  const [editGoalForm, setEditGoalForm] = useState({ name: '', targetAmount: '', targetMonths: '' });
+
   const fetchData = async () => {
     try {
       const res = await savingsService.getSavingsData();
@@ -69,6 +75,18 @@ const SavingsPage = () => {
   const handleOpenExtend = (goal) => {
     setExtendForm({ remainingAmount: '', newMonths: '' });
     setExtendGoalId(goal.id);
+  };
+
+  const handleOpenEditGoal = (goal) => {
+    setEditGoalForm({ name: goal.name, targetAmount: goal.targetAmount, targetMonths: goal.targetMonths });
+    setEditGoalId(goal.id);
+  };
+
+  const handleEditGoalSubmit = async (e) => {
+    e.preventDefault();
+    await expenseService.updateGoal(editGoalId, editGoalForm);
+    setEditGoalId(null);
+    fetchData();
   };
 
   const handleExtendSubmit = async (e) => {
@@ -278,6 +296,14 @@ const SavingsPage = () => {
                         style={{ flex: 1, justifyContent: 'center' }}
                       >
                         <Clock size={18} /> Extend
+                      </button>
+                      <button
+                        onClick={() => handleOpenEditGoal(goal)}
+                        className="btn btn-outline"
+                        style={{ width: '45px', padding: '0', justifyContent: 'center' }}
+                        title="Edit Goal"
+                      >
+                        <Pencil size={16} />
                       </button>
                       <button
                         onClick={() => handleDeleteGoal(goal.id)}
@@ -511,9 +537,18 @@ const SavingsPage = () => {
               </div>
               <div style={{ display: 'grid', gap: '0.75rem' }}>
                 {completedGoals.map(goal => (
-                  <div key={goal.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.875rem' }}>
-                    <CheckCircle2 size={16} color="var(--accent)" />
-                    <span>{goal.name}</span>
+                  <div key={goal.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.875rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <CheckCircle2 size={16} color="var(--accent)" />
+                      <span>{goal.name}</span>
+                    </div>
+                    <button
+                      onClick={() => handleOpenEditGoal(goal)}
+                      title="Rename"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '2px' }}
+                    >
+                      <Pencil size={13} />
+                    </button>
                   </div>
                 ))}
               </div>
@@ -521,6 +556,68 @@ const SavingsPage = () => {
           )}
         </aside>
       </div>
+
+      {/* Edit Goal Modal */}
+      {editGoalId && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div className="glass-card" style={{ width: '400px', border: '1px solid var(--primary)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h3 style={{ margin: 0 }}>Edit Goal</h3>
+              <button onClick={() => setEditGoalId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleEditGoalSubmit} style={{ display: 'grid', gap: '1rem' }}>
+              <div className="input-group" style={{ marginBottom: 0 }}>
+                <label>Goal Name</label>
+                <input
+                  type="text"
+                  value={editGoalForm.name}
+                  onChange={e => setEditGoalForm({ ...editGoalForm, name: e.target.value })}
+                  required
+                />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="input-group" style={{ marginBottom: 0 }}>
+                  <label>Target Amount ($)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="0.01"
+                    value={editGoalForm.targetAmount}
+                    onChange={e => setEditGoalForm({ ...editGoalForm, targetAmount: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="input-group" style={{ marginBottom: 0 }}>
+                  <label>Months</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={editGoalForm.targetMonths}
+                    onChange={e => setEditGoalForm({ ...editGoalForm, targetMonths: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+              {editGoalForm.targetAmount && editGoalForm.targetMonths && (
+                <div style={{ background: 'rgba(99,102,241,0.1)', borderRadius: '8px', padding: '0.75rem', fontSize: '0.875rem' }}>
+                  New monthly: <strong style={{ color: 'white' }}>${(parseFloat(editGoalForm.targetAmount) / parseInt(editGoalForm.targetMonths)).toFixed(2)}/mo</strong>
+                </div>
+              )}
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
+                Renaming will also update the wallet transactions and vault logs to match.
+              </p>
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }}>
+                  <Save size={16} /> Save Changes
+                </button>
+                <button type="button" onClick={() => setEditGoalId(null)} className="btn btn-outline" style={{ flex: 1, justifyContent: 'center' }}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Extend Goal Modal */}
       {extendGoalId && extendGoalData && (
