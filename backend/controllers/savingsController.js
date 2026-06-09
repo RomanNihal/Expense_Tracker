@@ -1,4 +1,4 @@
-const { SavingsGoal, SavingLog } = require('../models');
+const { SavingsGoal, SavingLog, Transaction } = require('../models');
 
 exports.getSavingsData = async (req, res) => {
   try {
@@ -42,10 +42,42 @@ exports.updateSavingLog = async (req, res) => {
     const log = await SavingLog.findOne({ where: { id: req.params.id, userId: req.user.id } });
     if (!log) return res.status(404).json({ success: false, error: 'Log not found' });
 
+    const oldDescription = log.description;
+
     if (amount !== undefined) log.amount = amount;
     if (description !== undefined) log.description = description;
     if (date !== undefined) log.date = date;
     await log.save();
+
+    // Bidirectional sync: if a "Completed Goal: X" or "Partial Save: X" log is renamed
+    // to "Completed Goal: Y", propagate the new name to the goal + wallet transactions
+    if (description && description !== oldDescription) {
+      const oldMatch = oldDescription.match(/^(?:Completed Goal|Partial Save): (.+)$/);
+      const newMatch = description.match(/^(?:Completed Goal|Partial Save): (.+)$/);
+      if (oldMatch && newMatch && oldMatch[1] !== newMatch[1]) {
+        const oldName = oldMatch[1];
+        const newName = newMatch[1];
+        // Update the SavingsGoal name
+        await SavingsGoal.update(
+          { name: newName },
+          { where: { userId: req.user.id, name: oldName } }
+        );
+        // Update wallet SAVINGS transactions
+        await Transaction.update(
+          { name: `Savings: ${newName}` },
+          { where: { userId: req.user.id, name: `Savings: ${oldName}`, type: 'SAVINGS' } }
+        );
+        // Update any other vault logs referencing this goal name
+        await SavingLog.update(
+          { description: `Completed Goal: ${newName}` },
+          { where: { userId: req.user.id, description: `Completed Goal: ${oldName}` } }
+        );
+        await SavingLog.update(
+          { description: `Partial Save: ${newName}` },
+          { where: { userId: req.user.id, description: `Partial Save: ${oldName}` } }
+        );
+      }
+    }
 
     res.json({ success: true, data: log });
   } catch (error) {
