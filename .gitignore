@@ -64,3 +64,5 @@ yarn-error.log*
 
 .vercel
 .env*
+
+DEPLOYMENT_MISTAKES.md

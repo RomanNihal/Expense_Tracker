@@ -19,12 +19,25 @@
   box-sizing: border-box;
 }
 
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
   background-color: var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
-  min-height: 100vh;
+  min-height: 100dvh;
   overflow-x: hidden;
+  /* Mobile Webview optimizations */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input, textarea, select, .selectable {
+  -webkit-user-select: auto;
+  user-select: auto;
 }
 
 .glass-card {
@@ -83,6 +96,7 @@ body {
   border-radius: 0.5rem;
   color: white;
   transition: border-color 0.2s;
+  font-size: 16px; /* Prevent iOS zoom */
 }
 
 .input-group input:focus {
@@ -159,6 +173,7 @@ body {
   outline: none;
   width: 200px;
   transition: all 0.2s;
+  font-size: 16px; /* Prevent iOS zoom */
 }
 
 .custom-select:hover {
@@ -209,7 +224,7 @@ body {
 @media (max-width: 768px) {
   /* Reserve space for fixed bottom nav */
   body {
-    padding-bottom: 68px;
+    padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
   }
 
   /* Reduce page padding */
@@ -224,7 +239,8 @@ body {
     bottom: 0;
     left: 0;
     right: 0;
-    height: 64px;
+    height: calc(64px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
     background: rgba(15, 23, 42, 0.97);
     backdrop-filter: blur(20px);
     border-top: 1px solid var(--glass-border);
