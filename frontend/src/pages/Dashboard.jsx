@@ -73,10 +73,10 @@ const Dashboard = () => {
   };
 
   if (loading) return (
-    <div style={{ height: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div className="animate-pulse" style={{ textAlign: 'center' }}>
-        <Wallet size={48} color="var(--primary)" style={{ marginBottom: '1rem' }} />
-        <p style={{ color: 'var(--text-muted)' }}>Calculating your wealth...</p>
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="animate-pulse flex flex-col items-center">
+        <Wallet size={48} className="text-primary mb-4" />
+        <p className="text-muted">Calculating your wealth...</p>
       </div>
     </div>
   );
@@ -88,50 +88,46 @@ const Dashboard = () => {
     type: t.type
   }));
 
-
   return (
-    <div className="page-outer" style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto' }}>
-      <header style={{ marginBottom: '2.5rem' }}>
-        <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '0.5rem' }}>Dashboard</h1>
-        <p style={{ color: 'var(--text-muted)' }}>Welcome back! Here's your financial overview.</p>
+    <div className="container animate-fade-in">
+      <header className="mb-8">
+        <h1 className="text-h1 mb-2">Dashboard</h1>
+        <p className="text-muted text-lg">Welcome back! Here's your financial overview.</p>
       </header>
 
-      <div className="dash-12" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '1.5rem' }}>
+      <div className="grid grid-cols-12 gap-6">
         
         {/* Main Wallet Card */}
-        <div className="glass-card" style={{ 
-          gridColumn: 'span 8', 
-          gridRow: 'span 2',
+        <div className="glass-card lg-col-span-8 lg-row-span-2" style={{ 
           background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)',
-          padding: '2rem',
           position: 'relative',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          padding: '2.5rem'
         }}>
           <div style={{ position: 'relative', zIndex: 1 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
+            <div className="flex justify-between items-start mb-8">
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+                <div className="flex items-center gap-2 text-muted mb-2 text-sm font-semibold tracking-wider">
                   <Wallet size={20} />
-                  <span style={{ fontWeight: 600, fontSize: '0.9rem', letterSpacing: '0.05em' }}>TOTAL WALLET BALANCE</span>
+                  <span>TOTAL WALLET BALANCE</span>
                 </div>
-                <div style={{ fontSize: '2.75rem', fontWeight: 800, color: 'white' }}>
+                <div className="text-white" style={{ fontSize: '3.5rem', fontWeight: 900, letterSpacing: '-0.02em', lineHeight: 1 }}>
                   ${(data.totalBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
-
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ padding: '0.5rem 1rem', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '2rem', color: 'var(--accent)', fontSize: '0.875rem', fontWeight: 600 }}>
-                  <ArrowUpCircle size={14} style={{ marginRight: '0.4rem' }} /> +${(data.monthlyIncome || 0).toFixed(2)} this month
+              <div className="text-right">
+                <div className="badge badge-income flex items-center" style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}>
+                  <ArrowUpCircle size={16} className="mr-2" /> +${(data.monthlyIncome || 0).toFixed(2)} this month
                 </div>
               </div>
             </div>
 
-            <div style={{ height: '240px', width: '100%', marginTop: '2rem' }}>
+            <div style={{ height: '280px', width: '100%', marginTop: '2rem' }}>
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData || []}>
                   <defs>
                     <linearGradient id="colorAmt" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3}/>
+                      <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.4}/>
                       <stop offset="95%" stopColor="var(--primary)" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
@@ -139,8 +135,8 @@ const Dashboard = () => {
                   <XAxis dataKey="date" stroke="rgba(255,255,255,0.3)" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis hide />
                   <Tooltip 
-                    contentStyle={{ background: 'var(--card-bg)', border: '1px solid var(--glass-border)', borderRadius: '0.5rem' }}
-                    itemStyle={{ color: 'white' }}
+                    contentStyle={{ background: 'var(--surface-color)', border: '1px solid var(--glass-border)', borderRadius: '0.75rem', boxShadow: 'var(--shadow-lg)' }}
+                    itemStyle={{ color: 'white', fontWeight: 600 }}
                   />
                   <Area type="monotone" dataKey="amount" stroke="var(--primary)" strokeWidth={3} fillOpacity={1} fill="url(#colorAmt)" />
                 </AreaChart>
@@ -148,26 +144,26 @@ const Dashboard = () => {
             </div>
           </div>
           {/* Decorative background element */}
-          <div style={{ position: 'absolute', top: '-20%', right: '-10%', width: '400px', height: '400px', background: 'var(--primary)', filter: 'blur(150px)', opacity: 0.1, pointerEvents: 'none' }}></div>
+          <div style={{ position: 'absolute', top: '-20%', right: '-10%', width: '400px', height: '400px', background: 'var(--primary)', filter: 'blur(150px)', opacity: 0.15, pointerEvents: 'none' }}></div>
         </div>
 
         {/* Daily Stats Card */}
-        <div className="glass-card" style={{ gridColumn: 'span 4' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
-            <div style={{ padding: '0.5rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '0.5rem' }}>
-              <TrendingDown size={20} color="var(--danger)" />
+        <div className="glass-card lg-col-span-4">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 rounded-lg" style={{ background: 'var(--danger-light)' }}>
+              <TrendingDown size={22} className="text-danger" />
             </div>
-            <span style={{ fontWeight: 600 }}>Today's Spending</span>
+            <span className="text-lg">Today's Spending</span>
           </div>
-          <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'white', marginBottom: '0.5rem' }}>
+          <div className="text-white mb-4" style={{ fontSize: '2.5rem', fontWeight: 800 }}>
             ${(data.todayExpenses || 0).toFixed(2)}
           </div>
-          <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '0.75rem', border: '1px solid var(--glass-border)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
-              <span style={{ color: 'var(--text-muted)' }}>Daily Allowance</span>
-              <span style={{ fontWeight: 600 }}>${(data.recommendedDaily || 0).toFixed(2)}</span>
+          <div className="p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)' }}>
+            <div className="flex justify-between text-sm mb-2">
+              <span className="text-muted">Daily Allowance</span>
+              <span className="font-semibold text-white">${(data.recommendedDaily || 0).toFixed(2)}</span>
             </div>
-            <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
+            <div className="w-full rounded-full overflow-hidden" style={{ height: '8px', background: 'rgba(255,255,255,0.05)' }}>
               <div style={{ 
                 width: `${Math.min(100, ((data.todayExpenses || 0) / (data.recommendedDaily || 1)) * 100)}%`, 
                 height: '100%', 
@@ -179,40 +175,40 @@ const Dashboard = () => {
         </div>
 
         {/* Savings Goal Card */}
-        <div className="glass-card" style={{ gridColumn: 'span 4' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div style={{ padding: '0.5rem', background: 'rgba(99, 102, 241, 0.1)', borderRadius: '0.5rem' }}>
-                <PiggyBank size={20} color="var(--primary)" />
+        <div className="glass-card lg-col-span-4 flex flex-col">
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg" style={{ background: 'var(--primary-light)' }}>
+                <PiggyBank size={22} className="text-primary" />
               </div>
-              <span style={{ fontWeight: 600 }}>Monthly Savings</span>
+              <span className="text-lg">Monthly Savings</span>
             </div>
-            <Link to="/savings" style={{ color: 'var(--primary)', fontSize: '0.75rem', fontWeight: 600, textDecoration: 'none' }}>
+            <Link to="/savings" className="text-xs text-primary hover:text-white transition-colors">
               Manage Vault
             </Link>
           </div>
           
-          <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'white', marginBottom: '0.25rem' }}>
+          <div className="text-white mb-1" style={{ fontSize: '2.5rem', fontWeight: 800 }}>
             ${(data.monthlySavings || 0).toFixed(2)}
           </div>
-          <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+          <div className="text-sm text-muted mb-6">
             Combined goal allocation
           </div>
 
-          <div style={{ display: 'grid', gap: '0.75rem' }}>
+          <div className="grid gap-3 mt-auto">
             {(data.activeGoals || []).slice(0, 3).map(goal => (
-              <div key={goal.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.875rem', padding: '0.5rem', background: 'rgba(255,255,255,0.02)', borderRadius: '0.5rem' }}>
-                <span style={{ color: 'var(--text-muted)' }}>{goal.name}</span>
-                <span style={{ fontWeight: 600 }}>${parseFloat(goal.monthlySavings).toFixed(0)}</span>
+              <div key={goal.id} className="flex justify-between items-center text-sm p-3 rounded-lg" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                <span className="text-muted">{goal.name}</span>
+                <span className="text-white" style={{ fontWeight: 600 }}>${parseFloat(goal.monthlySavings).toFixed(0)}</span>
               </div>
             ))}
             {(!data.activeGoals || data.activeGoals.length === 0) && (
-              <div style={{ textAlign: 'center', padding: '1rem 0', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+              <div className="text-center py-4 text-muted text-sm">
                 No active savings goals.
               </div>
             )}
             {data.activeGoals?.length > 3 && (
-              <div style={{ fontSize: '0.75rem', color: 'var(--primary)', textAlign: 'center' }}>
+              <div className="text-xs text-primary text-center mt-2">
                 + {data.activeGoals.length - 3} more goals
               </div>
             )}
@@ -221,27 +217,29 @@ const Dashboard = () => {
 
 
         {/* Log Transaction Form */}
-        <div className="glass-card" style={{ gridColumn: 'span 4' }}>
-          <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Plus size={20} color="var(--primary)" />
+        <div className="glass-card lg-col-span-4">
+          <h3 className="flex items-center gap-2 mb-6 text-h3 text-primary">
+            <Plus size={24} />
             Log Transaction
           </h3>
           <form onSubmit={handleDailySubmit}>
             <div className="input-group">
-              <label>Description</label>
+              <label className="input-label">Description</label>
               <input 
                 type="text" 
+                className="input-field"
                 placeholder="What was this for?" 
                 value={dailyExp.name}
                 onChange={(e) => setDailyExp({...dailyExp, name: e.target.value})}
                 required 
               />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="grid grid-cols-2 gap-4">
               <div className="input-group">
-                <label>Amount</label>
+                <label className="input-label">Amount</label>
                 <input 
                   type="number" 
+                  className="input-field"
                   placeholder="0.00" 
                   value={dailyExp.amount}
                   onChange={(e) => setDailyExp({...dailyExp, amount: e.target.value})}
@@ -249,9 +247,10 @@ const Dashboard = () => {
                 />
               </div>
               <div className="input-group">
-                <label>Date</label>
+                <label className="input-label">Date</label>
                 <input 
                   type="date" 
+                  className="input-field"
                   value={dailyExp.date}
                   onChange={(e) => setDailyExp({...dailyExp, date: e.target.value})}
                   required 
@@ -259,87 +258,77 @@ const Dashboard = () => {
               </div>
             </div>
             <div className="input-group">
-              <label>Type</label>
+              <label className="input-label">Type</label>
               <select 
+                className="input-field"
                 value={dailyExp.type}
                 onChange={(e) => setDailyExp({...dailyExp, type: e.target.value})}
                 required
-                style={{ 
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  background: 'rgba(15, 23, 42, 0.5)',
-                  border: '1px solid var(--glass-border)',
-                  borderRadius: '0.5rem',
-                  color: 'var(--text)',
-                  outline: 'none',
-                  appearance: 'none',
-                  cursor: 'pointer'
-                }}
               >
-                <option value="EXPENSE" style={{ background: 'var(--bg)' }}>Expense</option>
-                <option value="INCOME" style={{ background: 'var(--bg)' }}>Income</option>
+                <option value="EXPENSE" style={{ background: 'var(--surface-color)' }}>Expense</option>
+                <option value="INCOME" style={{ background: 'var(--surface-color)' }}>Income</option>
               </select>
             </div>
 
-            <button type="submit" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: '0.5rem' }}>
+            <button type="submit" className="btn btn-primary w-full mt-4">
               Add Entry
             </button>
           </form>
         </div>
 
         {/* Fixed Items Setup */}
-        <div className="glass-card" style={{ gridColumn: 'span 4' }}>
-          <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Settings size={20} color="var(--accent)" />
+        <div className="glass-card lg-col-span-4">
+          <h3 className="flex items-center gap-2 mb-6 text-h3 text-accent">
+            <Settings size={24} />
             Fixed Settings
           </h3>
-          <div style={{ display: 'grid', gap: '1.25rem' }}>
+          <div className="grid gap-6">
             <form onSubmit={handleFixedIncSubmit}>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>ADD FIXED INCOME</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: '0.5rem' }}>
-                <input placeholder="Source" value={fixedInc.source} onChange={(e)=>setFixedInc({...fixedInc, source: e.target.value})} style={{ width: '100%', padding: '0.5rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: '0.4rem', color: 'white', fontSize: '0.875rem' }} required />
-                <input type="number" placeholder="Amt" value={fixedInc.amount} onChange={(e)=>setFixedInc({...fixedInc, amount: e.target.value})} style={{ width: '100%', padding: '0.5rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: '0.4rem', color: 'white', fontSize: '0.875rem' }} required />
-                <button type="submit" className="btn btn-primary" style={{ padding: '0 0.75rem', height: '100%' }}><Plus size={16}/></button>
+              <div className="text-xs mb-2 text-muted">ADD FIXED INCOME</div>
+              <div className="flex gap-2">
+                <input className="input-field flex-1" placeholder="Source" value={fixedInc.source} onChange={(e)=>setFixedInc({...fixedInc, source: e.target.value})} required style={{ padding: '0.6rem' }} />
+                <input type="number" className="input-field" placeholder="Amt" value={fixedInc.amount} onChange={(e)=>setFixedInc({...fixedInc, amount: e.target.value})} required style={{ width: '80px', padding: '0.6rem' }} />
+                <button type="submit" className="btn btn-primary" style={{ padding: '0 1rem' }}><Plus size={18}/></button>
               </div>
             </form>
 
             <form onSubmit={handleFixedExpSubmit}>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>ADD FIXED COST</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: '0.5rem' }}>
-                <input placeholder="Name" value={fixedExp.name} onChange={(e)=>setFixedExp({...fixedExp, name: e.target.value})} style={{ width: '100%', padding: '0.5rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: '0.4rem', color: 'white', fontSize: '0.875rem' }} required />
-                <input type="number" placeholder="Amt" value={fixedExp.amount} onChange={(e)=>setFixedExp({...fixedExp, amount: e.target.value})} style={{ width: '100%', padding: '0.5rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: '0.4rem', color: 'white', fontSize: '0.875rem' }} required />
-                <button type="submit" className="btn btn-primary" style={{ padding: '0 0.75rem', height: '100%', background: 'var(--danger)' }}><Plus size={16}/></button>
+              <div className="text-xs mb-2 text-muted">ADD FIXED COST</div>
+              <div className="flex gap-2">
+                <input className="input-field flex-1" placeholder="Name" value={fixedExp.name} onChange={(e)=>setFixedExp({...fixedExp, name: e.target.value})} required style={{ padding: '0.6rem' }} />
+                <input type="number" className="input-field" placeholder="Amt" value={fixedExp.amount} onChange={(e)=>setFixedExp({...fixedExp, amount: e.target.value})} required style={{ width: '80px', padding: '0.6rem' }} />
+                <button type="submit" className="btn btn-danger" style={{ padding: '0 1rem' }}><Plus size={18}/></button>
               </div>
             </form>
 
-            <div style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'rgba(99, 102, 241, 0.05)', borderRadius: '0.5rem', border: '1px dashed var(--glass-border)', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+            <div className="mt-2 p-4 rounded-xl text-sm text-muted text-center" style={{ background: 'var(--primary-light)', border: '1px dashed var(--primary)' }}>
               Fixed items are automatically applied on the 1st of every month.
             </div>
           </div>
         </div>
 
         {/* Goals / Recent Combined Row */}
-        <div className="glass-card" style={{ gridColumn: 'span 4' }}>
-          <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Target size={20} color="var(--primary)" />
+        <div className="glass-card lg-col-span-4">
+          <h3 className="flex items-center gap-2 mb-6 text-h3 text-primary">
+            <Target size={24} />
             New Goal
           </h3>
           <form onSubmit={handleGoalSubmit}>
             <div className="input-group">
-              <label>Goal Name</label>
-              <input placeholder="e.g. Dream Vacation" value={goalForm.name} onChange={(e)=>setGoalForm({...goalForm, name: e.target.value})} required />
+              <label className="input-label">Goal Name</label>
+              <input className="input-field" placeholder="e.g. Dream Vacation" value={goalForm.name} onChange={(e)=>setGoalForm({...goalForm, name: e.target.value})} required />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="grid grid-cols-2 gap-4">
               <div className="input-group">
-                <label>Target ($)</label>
-                <input type="number" placeholder="2000" value={goalForm.targetAmount} onChange={(e)=>setGoalForm({...goalForm, targetAmount: e.target.value})} required />
+                <label className="input-label">Target ($)</label>
+                <input className="input-field" type="number" placeholder="2000" value={goalForm.targetAmount} onChange={(e)=>setGoalForm({...goalForm, targetAmount: e.target.value})} required />
               </div>
               <div className="input-group">
-                <label>Time (Months)</label>
-                <input type="number" placeholder="6" value={goalForm.targetMonths} onChange={(e)=>setGoalForm({...goalForm, targetMonths: e.target.value})} required />
+                <label className="input-label">Time (Months)</label>
+                <input className="input-field" type="number" placeholder="6" value={goalForm.targetMonths} onChange={(e)=>setGoalForm({...goalForm, targetMonths: e.target.value})} required />
               </div>
             </div>
-            <button type="submit" className="btn btn-outline" style={{ width: '100%', justifyContent: 'center' }}>Set New Goal</button>
+            <button type="submit" className="btn btn-outline w-full mt-4">Set New Goal</button>
           </form>
         </div>
 
@@ -349,4 +338,3 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-

@@ -13,7 +13,6 @@ import {
   PiggyBank
 } from 'lucide-react';
 
-
 const TransactionsPage = () => {
   const [transactions, setTransactions] = useState([]);
   const [fixedIncomes, setFixedIncomes] = useState([]);
@@ -114,8 +113,6 @@ const TransactionsPage = () => {
     }
   };
 
-
-
   // Build per-month totals from all transactions (unfiltered)
   const monthlyHistory = (() => {
     const map = {};
@@ -144,85 +141,77 @@ const TransactionsPage = () => {
       const matchesMonth = !selectedMonth || (t.expenseDate || '').startsWith(selectedMonth);
       return matchesSearch && matchesFilter && matchesMonth;
     })
-
     .sort((a, b) => new Date(b.expenseDate) - new Date(a.expenseDate));
 
-  if (loading) return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading ledger...</div>;
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="animate-pulse flex flex-col items-center">
+        <ArrowUpCircle size={48} className="text-primary mb-4" />
+        <p className="text-muted">Loading ledger...</p>
+      </div>
+    </div>
+  );
 
   return (
-    <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem' }} className="animate-fade-in page-outer">
-      <header style={{ marginBottom: '3rem' }}>
-        <h1 style={{ fontSize: '3rem', fontWeight: 900, letterSpacing: '-0.03em', marginBottom: '0.5rem' }}>Your Wallet</h1>
-        <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>Transaction history and recurring settings</p>
+    <div className="container animate-fade-in">
+      <header className="mb-8">
+        <h1 className="text-h1 mb-2">Your Wallet</h1>
+        <p className="text-muted text-lg">Transaction history and recurring settings</p>
       </header>
 
       {/* Monthly Overview */}
       {monthlyHistory.length > 0 && (
-        <div style={{ marginBottom: '2.5rem' }}>
-          <div style={{ marginBottom: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Monthly Breakdown</span>
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', opacity: 0.6 }}>— click a card to filter</span>
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-xs text-muted">MONTHLY BREAKDOWN</span>
+            <span className="text-xs text-muted opacity-60">— click a card to filter</span>
           </div>
-          <div style={{ display: 'flex', gap: '0.875rem', overflowX: 'auto', paddingBottom: '0.75rem' }}>
+          <div className="flex gap-4 overflow-x-auto pb-4" style={{ WebkitOverflowScrolling: 'touch' }}>
             {monthlyHistory.map(([month, totals]) => {
               const net = totals.income - totals.expenses - totals.savings;
               const isActive = selectedMonth === month;
-              const netColor = net >= 0 ? '#10b981' : '#ef4444';
+              const netColor = net >= 0 ? 'var(--accent)' : 'var(--danger)';
+              const topBorderColor = net >= 0 ? 'var(--accent)' : 'var(--danger)';
+              
               return (
                 <div
                   key={month}
                   onClick={() => setSelectedMonth(isActive ? '' : month)}
-                  style={{
-                    minWidth: '185px',
-                    borderRadius: '1rem',
-                    overflow: 'hidden',
-                    border: `1px solid ${isActive ? 'var(--primary)' : 'rgba(255,255,255,0.07)'}`,
-                    background: isActive ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.03)',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    flexShrink: 0,
-                    boxShadow: isActive ? '0 0 0 1px var(--primary)' : 'none'
-                  }}
+                  className={`flex-shrink-0 cursor-pointer transition-all duration-200 overflow-hidden rounded-xl ${isActive ? 'ring-2 ring-primary bg-primary-light' : 'bg-surface hover:bg-surface-hover border border-glass-border'}`}
+                  style={{ minWidth: '200px', background: isActive ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.03)', border: isActive ? '1px solid var(--primary)' : '1px solid var(--glass-border)' }}
                 >
-                  {/* Top accent bar */}
-                  <div style={{ height: '3px', background: net >= 0 ? 'linear-gradient(90deg,#10b981,#34d399)' : 'linear-gradient(90deg,#ef4444,#f87171)' }} />
-
-                  {/* Month header */}
-                  <div style={{ padding: '0.875rem 1.1rem 0.75rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <div style={{ fontSize: '0.95rem', fontWeight: 800, color: isActive ? 'var(--primary)' : 'white', letterSpacing: '-0.01em' }}>
+                  <div style={{ height: '3px', background: topBorderColor }} />
+                  
+                  <div className="p-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                    <div className="font-bold" style={{ color: isActive ? 'var(--primary)' : 'white' }}>
                       {formatMonth(month)}
                     </div>
                   </div>
 
-                  {/* Stats */}
-                  <div style={{ padding: '0.75rem 1.1rem', display: 'grid', gap: '0.45rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <TrendingUp size={11} color="#10b981" />
-                        <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.55)' }}>Income</span>
+                  <div className="p-4 grid gap-2">
+                    <div className="flex justify-between items-center text-sm">
+                      <div className="flex items-center gap-2 text-muted">
+                        <TrendingUp size={14} className="text-accent" /> Income
                       </div>
-                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#10b981' }}>+${totals.income.toLocaleString()}</span>
+                      <span className="font-semibold text-accent">+${totals.income.toLocaleString()}</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <TrendingDown size={11} color="#ef4444" />
-                        <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.55)' }}>Expenses</span>
+                    <div className="flex justify-between items-center text-sm">
+                      <div className="flex items-center gap-2 text-muted">
+                        <TrendingDown size={14} className="text-danger" /> Expenses
                       </div>
-                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#ef4444' }}>-${totals.expenses.toLocaleString()}</span>
+                      <span className="font-semibold text-danger">-${totals.expenses.toLocaleString()}</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <PiggyBank size={11} color="#818cf8" />
-                        <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.55)' }}>Savings</span>
+                    <div className="flex justify-between items-center text-sm">
+                      <div className="flex items-center gap-2 text-muted">
+                        <PiggyBank size={14} className="text-primary" /> Savings
                       </div>
-                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#818cf8' }}>-${totals.savings.toLocaleString()}</span>
+                      <span className="font-semibold text-primary">-${totals.savings.toLocaleString()}</span>
                     </div>
                   </div>
 
-                  {/* Net footer */}
-                  <div style={{ padding: '0.6rem 1.1rem', background: net >= 0 ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Net</span>
-                    <span style={{ fontSize: '0.9rem', fontWeight: 800, color: netColor }}>
+                  <div className="p-3 flex justify-between items-center" style={{ background: net >= 0 ? 'rgba(16,185,129,0.05)' : 'rgba(239,68,68,0.05)' }}>
+                    <span className="text-xs text-muted">NET</span>
+                    <span className="font-bold text-lg" style={{ color: netColor }}>
                       {net >= 0 ? '+' : ''}${Math.abs(net).toLocaleString()}
                     </span>
                   </div>
@@ -233,57 +222,50 @@ const TransactionsPage = () => {
         </div>
       )}
 
-      <div className="two-col-layout">
+      <div className="grid grid-cols-12 gap-6">
         {/* Main List */}
-        <div className="glass-card" style={{ padding: '0', overflow: 'hidden' }}>
-          <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.02)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
-              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>Ledger History</h3>
-              <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="glass-card no-padding lg-col-span-8">
+          <div className="p-6 border-b" style={{ borderColor: 'var(--glass-border)', background: 'rgba(255,255,255,0.02)' }}>
+            <div className="flex flex-wrap justify-between items-center gap-4">
+              <h3 className="text-h3 m-0">Ledger History</h3>
+              <div className="flex flex-wrap items-center gap-3">
                 {/* Search */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: '0.5rem' }}>
-                  <Search size={14} color="var(--text-muted)" />
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-glass-border bg-black bg-opacity-20">
+                  <Search size={16} className="text-muted" />
                   <input
                     type="text"
                     placeholder="Search..."
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
-                    style={{ background: 'none', border: 'none', color: 'white', outline: 'none', fontSize: '0.875rem', width: '130px' }}
+                    className="bg-transparent border-none text-white text-sm outline-none"
+                    style={{ width: '120px', fontSize: '16px' }}
                   />
                 </div>
                 {/* Type filter */}
                 <select
-                  className="custom-select"
+                  className="input-field py-2"
                   value={filterType}
                   onChange={e => setFilterType(e.target.value)}
-                  style={{ padding: '0.4rem 0.75rem', fontSize: '0.875rem' }}
+                  style={{ width: '130px', padding: '0.5rem', background: 'var(--bg-color)' }}
                 >
-                  <option value="ALL" style={{ background: 'var(--bg)' }}>All Types</option>
-                  <option value="INCOME" style={{ background: 'var(--bg)' }}>Income</option>
-                  <option value="EXPENSE" style={{ background: 'var(--bg)' }}>Expenses</option>
-                  <option value="SAVINGS" style={{ background: 'var(--bg)' }}>Savings</option>
+                  <option value="ALL">All Types</option>
+                  <option value="INCOME">Income</option>
+                  <option value="EXPENSE">Expenses</option>
+                  <option value="SAVINGS">Savings</option>
                 </select>
                 {/* Month filter */}
                 <input
                   type="month"
                   value={selectedMonth}
                   onChange={e => setSelectedMonth(e.target.value)}
-                  style={{ padding: '0.4rem 0.75rem', background: 'rgba(255,255,255,0.07)', border: '1px solid var(--glass-border)', borderRadius: '0.5rem', color: 'white', fontSize: '0.875rem', outline: 'none', cursor: 'pointer' }}
+                  className="input-field py-2"
+                  style={{ width: '150px', padding: '0.5rem', background: 'var(--bg-color)' }}
                 />
                 {/* Always-visible All toggle */}
                 <button
                   onClick={() => setSelectedMonth('')}
-                  style={{
-                    padding: '0.4rem 0.85rem',
-                    borderRadius: '0.5rem',
-                    cursor: 'pointer',
-                    fontSize: '0.82rem',
-                    fontWeight: !selectedMonth ? 700 : 500,
-                    border: `1px solid ${!selectedMonth ? 'var(--primary)' : 'var(--glass-border)'}`,
-                    background: !selectedMonth ? 'rgba(99,102,241,0.18)' : 'rgba(255,255,255,0.05)',
-                    color: !selectedMonth ? 'var(--primary)' : 'var(--text-muted)',
-                    transition: 'all 0.15s'
-                  }}
+                  className={`btn ${!selectedMonth ? 'btn-primary' : 'btn-outline'}`}
+                  style={{ padding: '0.5rem 1rem' }}
                 >
                   All
                 </button>
@@ -291,195 +273,207 @@ const TransactionsPage = () => {
             </div>
           </div>
           
-          <div className="table-scroll" style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          {/* Desktop Table View */}
+          <div className="table-scroll desktop-only">
+            <table className="data-table">
               <thead>
-                <tr style={{ textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.1em', background: 'rgba(255,255,255,0.01)' }}>
-                  <th style={{ padding: '1.25rem 2rem' }}>Date</th>
-                  <th style={{ padding: '1.25rem 2rem' }}>Description</th>
-                  <th style={{ padding: '1.25rem 2rem' }}>Type</th>
-                  <th style={{ padding: '1.25rem 2rem', textAlign: 'right' }}>Amount</th>
-                  <th style={{ padding: '1.25rem 2rem', textAlign: 'center' }}></th>
+                <tr>
+                  <th>Date</th>
+                  <th>Description</th>
+                  <th>Type</th>
+                  <th style={{ textAlign: 'right' }}>Amount</th>
+                  <th style={{ textAlign: 'center' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredTransactions.map((t, idx) => (
-                  <tr key={t.id} style={{ 
-                    borderBottom: '1px solid rgba(255,255,255,0.03)',
-                    background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)',
-                    transition: 'background 0.2s'
-                  }} className="hover-row">
+                  <tr key={t.id}>
                     {editingLedgerId === t.id ? (
                       <>
-                        <td style={{ padding: '1rem' }}>
-                          <input type="date" style={{ padding: '0.6rem', background: 'rgba(255,255,255,0.1)', border: '1px solid var(--primary)', borderRadius: '0.5rem', color: 'white', fontSize: '0.9rem', width: '140px', outline: 'none' }} value={ledgerEditForm.expenseDate} onChange={(e) => setLedgerEditForm({...ledgerEditForm, expenseDate: e.target.value})} />
-                        </td>
-                        <td style={{ padding: '1rem' }}>
-                          <input style={{ padding: '0.6rem', background: 'rgba(255,255,255,0.1)', border: '1px solid var(--primary)', borderRadius: '0.5rem', color: 'white', fontSize: '0.9rem', width: '100%', outline: 'none' }} value={ledgerEditForm.name} onChange={(e) => setLedgerEditForm({...ledgerEditForm, name: e.target.value})} />
-                        </td>
-                        <td style={{ padding: '1rem' }}>
-                          <select style={{ padding: '0.6rem', background: 'rgba(255,255,255,0.1)', border: '1px solid var(--primary)', borderRadius: '0.5rem', color: 'white', fontSize: '0.9rem', outline: 'none' }} value={ledgerEditForm.type} onChange={(e) => setLedgerEditForm({...ledgerEditForm, type: e.target.value})}>
-                            <option value="INCOME" style={{ background: 'var(--bg)' }}>INCOME</option>
-                            <option value="EXPENSE" style={{ background: 'var(--bg)' }}>EXPENSE</option>
-                            <option value="SAVINGS" style={{ background: 'var(--bg)' }}>SAVINGS</option>
+                        <td><input type="date" className="input-field py-1" value={ledgerEditForm.expenseDate} onChange={(e) => setLedgerEditForm({...ledgerEditForm, expenseDate: e.target.value})} /></td>
+                        <td><input className="input-field py-1" value={ledgerEditForm.name} onChange={(e) => setLedgerEditForm({...ledgerEditForm, name: e.target.value})} /></td>
+                        <td>
+                          <select className="input-field py-1" value={ledgerEditForm.type} onChange={(e) => setLedgerEditForm({...ledgerEditForm, type: e.target.value})}>
+                            <option value="INCOME">INCOME</option>
+                            <option value="EXPENSE">EXPENSE</option>
+                            <option value="SAVINGS">SAVINGS</option>
                           </select>
                         </td>
-                        <td style={{ padding: '1rem', textAlign: 'right' }}>
-                          <input type="number" style={{ padding: '0.6rem', background: 'rgba(255,255,255,0.1)', border: '1px solid var(--primary)', borderRadius: '0.5rem', color: 'white', fontSize: '0.9rem', width: '100px', textAlign: 'right', outline: 'none' }} value={ledgerEditForm.amount} onChange={(e) => setLedgerEditForm({...ledgerEditForm, amount: e.target.value})} />
-                        </td>
-                        <td style={{ padding: '1rem', textAlign: 'center' }}>
-                          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
-                            <button onClick={saveLedgerEdit} style={{ background: 'var(--primary)', border: 'none', cursor: 'pointer', color: 'white', padding: '0.5rem', borderRadius: '0.4rem', display: 'flex' }}><Save size={20}/></button>
-                            <button onClick={() => setEditingLedgerId(null)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', color: 'white', padding: '0.5rem', borderRadius: '0.4rem', display: 'flex' }}><X size={20}/></button>
+                        <td style={{ textAlign: 'right' }}><input type="number" className="input-field py-1 text-right" style={{ width: '100px' }} value={ledgerEditForm.amount} onChange={(e) => setLedgerEditForm({...ledgerEditForm, amount: e.target.value})} /></td>
+                        <td style={{ textAlign: 'center' }}>
+                          <div className="flex gap-2 justify-center">
+                            <button onClick={saveLedgerEdit} className="btn-icon text-primary"><Save size={18}/></button>
+                            <button onClick={() => setEditingLedgerId(null)} className="btn-icon"><X size={18}/></button>
                           </div>
                         </td>
                       </>
                     ) : (
                       <>
-                        <td style={{ padding: '1.25rem 2rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>{t.expenseDate}</td>
-                        <td style={{ padding: '1.25rem 2rem' }}>
-                          <div style={{ fontWeight: 600, fontSize: '1.05rem' }}>{t.name}</div>
+                        <td className="text-muted">{t.expenseDate}</td>
+                        <td>
+                          <div className="font-semibold text-md">{t.name}</div>
                           {t.isFixed && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.25rem' }}>
+                            <div className="flex items-center gap-1 mt-1">
                               <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--primary)' }}></div>
-                              <span style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 600, textTransform: 'uppercase' }}>Automated</span>
+                              <span className="text-xs text-primary">Automated</span>
                             </div>
                           )}
                         </td>
-                        <td style={{ padding: '1.25rem 2rem' }}>
-                          <span style={{ 
-                            fontSize: '0.7rem', 
-                            padding: '4px 10px', 
-                            borderRadius: '2rem',
-                            fontWeight: 800,
-                            letterSpacing: '0.05em',
-                            background: t.type === 'INCOME' ? 'rgba(16, 185, 129, 0.1)' : t.type === 'EXPENSE' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)',
-                            color: t.type === 'INCOME' ? '#10b981' : t.type === 'EXPENSE' ? '#ef4444' : '#3b82f6',
-                            border: `1px solid ${t.type === 'INCOME' ? 'rgba(16, 185, 129, 0.2)' : t.type === 'EXPENSE' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(59, 130, 246, 0.2)'}`
-                          }}>
+                        <td>
+                          <span className={`badge ${t.type === 'INCOME' ? 'badge-income' : t.type === 'EXPENSE' ? 'badge-expense' : 'badge-savings'}`}>
                             {t.type}
                           </span>
                         </td>
-                        <td style={{ 
-                          padding: '1.25rem 2rem', 
-                          textAlign: 'right', 
-                          fontSize: '1.15rem',
-                          fontWeight: 800,
-                          color: t.type === 'INCOME' ? 'var(--accent)' : 'var(--danger)'
-                        }}>
+                        <td className={`text-right font-bold text-lg ${t.type === 'INCOME' ? 'text-accent' : 'text-danger'}`}>
                           {t.type === 'INCOME' ? '+' : '-'}${(parseFloat(t.amount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </td>
-                        <td style={{ padding: '1.25rem 2rem', textAlign: 'center' }}>
-                          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-                            <Edit2 
-                              size={18} 
-                              style={{ cursor: 'pointer', color: 'var(--text-muted)' }} 
-                              onClick={() => startLedgerEdit(t)} 
-                            />
-                            <button 
-                              onClick={() => handleDelete(t.id)}
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', transition: 'color 0.2s' }}
-                              onMouseOver={(e) => e.currentTarget.style.color = 'var(--danger)'}
-                              onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
-                            >
-                              <Trash2 size={18} />
-                            </button>
+                        <td style={{ textAlign: 'center' }}>
+                          <div className="flex gap-3 justify-center">
+                            <button className="btn-icon" onClick={() => startLedgerEdit(t)}><Edit2 size={18} /></button>
+                            <button className="btn-icon hover:text-danger" onClick={() => handleDelete(t.id)}><Trash2 size={18} /></button>
                           </div>
                         </td>
                       </>
                     )}
                   </tr>
                 ))}
-
               </tbody>
             </table>
-            {filteredTransactions.length === 0 && (
-              <div style={{ padding: '6rem', textAlign: 'center' }}>
-                <Search size={48} color="var(--glass-border)" style={{ marginBottom: '1rem' }} />
-                <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>No transactions found matching your criteria.</p>
-              </div>
-            )}
           </div>
+
+          {/* Mobile Card View */}
+          <div className="mobile-card-list mobile-only">
+            {filteredTransactions.map(t => (
+              <div key={t.id} className="p-4 rounded-xl border border-glass-border" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                {editingLedgerId === t.id ? (
+                  <div className="grid gap-3">
+                    <input type="date" className="input-field" value={ledgerEditForm.expenseDate} onChange={(e) => setLedgerEditForm({...ledgerEditForm, expenseDate: e.target.value})} />
+                    <input className="input-field" value={ledgerEditForm.name} onChange={(e) => setLedgerEditForm({...ledgerEditForm, name: e.target.value})} />
+                    <select className="input-field" value={ledgerEditForm.type} onChange={(e) => setLedgerEditForm({...ledgerEditForm, type: e.target.value})}>
+                      <option value="INCOME">INCOME</option>
+                      <option value="EXPENSE">EXPENSE</option>
+                      <option value="SAVINGS">SAVINGS</option>
+                    </select>
+                    <input type="number" className="input-field" value={ledgerEditForm.amount} onChange={(e) => setLedgerEditForm({...ledgerEditForm, amount: e.target.value})} />
+                    <div className="flex gap-2">
+                      <button onClick={saveLedgerEdit} className="btn btn-primary flex-1 py-2">Save</button>
+                      <button onClick={() => setEditingLedgerId(null)} className="btn btn-outline flex-1 py-2">Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <div className="font-semibold text-md mb-1">{t.name}</div>
+                        <div className="text-xs text-muted">{t.expenseDate}</div>
+                        {t.isFixed && (
+                          <div className="text-xs text-primary mt-1">● Automated</div>
+                        )}
+                      </div>
+                      <div className={`font-bold text-lg ${t.type === 'INCOME' ? 'text-accent' : 'text-danger'}`}>
+                        {t.type === 'INCOME' ? '+' : '-'}${(parseFloat(t.amount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center pt-3 border-t" style={{ borderColor: 'var(--glass-border)' }}>
+                      <span className={`badge ${t.type === 'INCOME' ? 'badge-income' : t.type === 'EXPENSE' ? 'badge-expense' : 'badge-savings'}`}>
+                        {t.type}
+                      </span>
+                      <div className="flex gap-2">
+                        <button className="btn-icon p-1" onClick={() => startLedgerEdit(t)}><Edit2 size={16} /></button>
+                        <button className="btn-icon p-1 text-danger" onClick={() => handleDelete(t.id)}><Trash2 size={16} /></button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {filteredTransactions.length === 0 && (
+            <div className="p-12 text-center">
+              <div className="flex justify-center mb-4">
+                <Search size={48} className="text-muted opacity-50" />
+              </div>
+              <p className="text-muted text-lg">No transactions found matching your criteria.</p>
+            </div>
+          )}
         </div>
 
         {/* Sidebar: Fixed Settings */}
-        <aside style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          <div className="glass-card" style={{ border: '1px solid rgba(16, 185, 129, 0.2)', height: 'fit-content' }}>
-            <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--accent)' }}>
+        <div className="lg-col-span-4 flex flex-col gap-6">
+          <div className="glass-card" style={{ border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+            <h3 className="flex items-center gap-2 mb-6 text-h3 text-accent">
               <ArrowUpCircle size={24} />
               Monthly Income
             </h3>
-            <div style={{ display: 'grid', gap: '1rem' }}>
+            <div className="grid gap-4">
               {fixedIncomes.map(inc => (
-                <div key={inc.id} style={{ padding: '1.25rem', background: 'rgba(16, 185, 129, 0.03)', borderRadius: '1rem', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
+                <div key={inc.id} className="p-4 rounded-xl" style={{ background: 'var(--accent-light)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
                   {editingId === inc.id ? (
-                    <div style={{ display: 'grid', gap: '0.75rem' }}>
-                      <input style={{ padding: '0.6rem', background: 'rgba(255,255,255,0.1)', border: '1px solid var(--primary)', borderRadius: '0.5rem', color: 'white', outline: 'none' }} value={editForm.name} onChange={(e) => setEditForm({...editForm, name: e.target.value})} />
-                      <input type="number" style={{ padding: '0.6rem', background: 'rgba(255,255,255,0.1)', border: '1px solid var(--primary)', borderRadius: '0.5rem', color: 'white', outline: 'none' }} value={editForm.amount} onChange={(e) => setEditForm({...editForm, amount: e.target.value})} />
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button onClick={saveEdit} className="btn btn-primary" style={{ flex: 1, padding: '0.6rem', justifyContent: 'center' }}><Save size={18}/> Save</button>
-                        <button onClick={() => setEditingId(null)} className="btn btn-outline" style={{ flex: 1, padding: '0.6rem', justifyContent: 'center', borderColor: 'rgba(255,255,255,0.2)', color: 'white' }}><X size={18}/> Cancel</button>
+                    <div className="grid gap-3">
+                      <input className="input-field py-2" value={editForm.name} onChange={(e) => setEditForm({...editForm, name: e.target.value})} />
+                      <input type="number" className="input-field py-2" value={editForm.amount} onChange={(e) => setEditForm({...editForm, amount: e.target.value})} />
+                      <div className="flex gap-2">
+                        <button onClick={saveEdit} className="btn btn-primary flex-1 py-2 text-sm"><Save size={16}/> Save</button>
+                        <button onClick={() => setEditingId(null)} className="btn btn-outline flex-1 py-2 text-sm"><X size={16}/> Cancel</button>
                       </div>
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div className="flex justify-between items-center">
                       <div>
-                        <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>{inc.source}</div>
-                        <div style={{ color: 'var(--accent)', fontWeight: 800, fontSize: '1.25rem' }}>+${inc.amount}</div>
+                        <div className="font-bold text-lg">{inc.source}</div>
+                        <div className="text-accent font-extrabold text-xl">+${inc.amount}</div>
                       </div>
-                      <div style={{ display: 'flex', gap: '0.75rem' }}>
-                        <Edit2 size={18} color="var(--text-muted)" style={{ cursor: 'pointer' }} onClick={() => startEditing(inc, 'income')} />
-                        <Trash2 size={18} color="var(--danger)" style={{ cursor: 'pointer', opacity: 0.7 }} onClick={() => handleFixedDelete(inc.id, 'income')} />
+                      <div className="flex gap-2">
+                        <button className="btn-icon p-2" onClick={() => startEditing(inc, 'income')}><Edit2 size={18} /></button>
+                        <button className="btn-icon p-2 hover:text-danger" onClick={() => handleFixedDelete(inc.id, 'income')}><Trash2 size={18} /></button>
                       </div>
                     </div>
                   )}
                 </div>
               ))}
-              {fixedIncomes.length === 0 && <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', padding: '1rem' }}>No fixed income set.</p>}
+              {fixedIncomes.length === 0 && <p className="text-center text-muted text-sm p-4">No fixed income set.</p>}
             </div>
           </div>
 
-          <div className="glass-card" style={{ border: '1px solid rgba(239, 68, 68, 0.2)', height: 'fit-content' }}>
-            <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--danger)' }}>
+          <div className="glass-card" style={{ border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+            <h3 className="flex items-center gap-2 mb-6 text-h3 text-danger">
               <TrendingDown size={24} />
               Monthly Costs
             </h3>
-
-            <div style={{ display: 'grid', gap: '1rem' }}>
+            <div className="grid gap-4">
               {fixedExpenses.map(exp => (
-                <div key={exp.id} style={{ padding: '1.25rem', background: 'rgba(239, 68, 68, 0.03)', borderRadius: '1rem', border: '1px solid rgba(239, 68, 68, 0.1)' }}>
+                <div key={exp.id} className="p-4 rounded-xl" style={{ background: 'var(--danger-light)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
                   {editingId === exp.id ? (
-                    <div style={{ display: 'grid', gap: '0.75rem' }}>
-                      <input style={{ padding: '0.6rem', background: 'rgba(255,255,255,0.1)', border: '1px solid var(--primary)', borderRadius: '0.5rem', color: 'white', outline: 'none' }} value={editForm.name} onChange={(e) => setEditForm({...editForm, name: e.target.value})} />
-                      <input type="number" style={{ padding: '0.6rem', background: 'rgba(255,255,255,0.1)', border: '1px solid var(--primary)', borderRadius: '0.5rem', color: 'white', outline: 'none' }} value={editForm.amount} onChange={(e) => setEditForm({...editForm, amount: e.target.value})} />
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button onClick={saveEdit} className="btn btn-primary" style={{ flex: 1, padding: '0.6rem', justifyContent: 'center' }}><Save size={18}/> Save</button>
-                        <button onClick={() => setEditingId(null)} className="btn btn-outline" style={{ flex: 1, padding: '0.6rem', justifyContent: 'center', borderColor: 'rgba(255,255,255,0.2)', color: 'white' }}><X size={18}/> Cancel</button>
+                    <div className="grid gap-3">
+                      <input className="input-field py-2" value={editForm.name} onChange={(e) => setEditForm({...editForm, name: e.target.value})} />
+                      <input type="number" className="input-field py-2" value={editForm.amount} onChange={(e) => setEditForm({...editForm, amount: e.target.value})} />
+                      <div className="flex gap-2">
+                        <button onClick={saveEdit} className="btn btn-primary flex-1 py-2 text-sm"><Save size={16}/> Save</button>
+                        <button onClick={() => setEditingId(null)} className="btn btn-outline flex-1 py-2 text-sm"><X size={16}/> Cancel</button>
                       </div>
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div className="flex justify-between items-center">
                       <div>
-                        <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>{exp.name}</div>
-                        <div style={{ color: 'var(--danger)', fontWeight: 800, fontSize: '1.25rem' }}>-${exp.amount}</div>
+                        <div className="font-bold text-lg">{exp.name}</div>
+                        <div className="text-danger font-extrabold text-xl">-${exp.amount}</div>
                       </div>
-                      <div style={{ display: 'flex', gap: '0.75rem' }}>
-                        <Edit2 size={18} color="var(--text-muted)" style={{ cursor: 'pointer' }} onClick={() => startEditing(exp, 'expense')} />
-                        <Trash2 size={18} color="var(--danger)" style={{ cursor: 'pointer', opacity: 0.7 }} onClick={() => handleFixedDelete(exp.id, 'expense')} />
+                      <div className="flex gap-2">
+                        <button className="btn-icon p-2" onClick={() => startEditing(exp, 'expense')}><Edit2 size={18} /></button>
+                        <button className="btn-icon p-2 hover:text-danger" onClick={() => handleFixedDelete(exp.id, 'expense')}><Trash2 size={18} /></button>
                       </div>
                     </div>
                   )}
                 </div>
               ))}
-
-              {fixedExpenses.length === 0 && <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', padding: '1rem' }}>No fixed costs set.</p>}
+              {fixedExpenses.length === 0 && <p className="text-center text-muted text-sm p-4">No fixed costs set.</p>}
             </div>
           </div>
-        </aside>
+        </div>
       </div>
     </div>
   );
 };
 
 export default TransactionsPage;
-

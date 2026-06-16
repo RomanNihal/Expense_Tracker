@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { savingsService } from '../services/api';
+import { savingsService, expenseService } from '../services/api';
 import {
   PiggyBank,
   CheckCircle2,
@@ -15,9 +15,7 @@ import {
   AlertTriangle,
   Save
 } from 'lucide-react';
-import { expenseService } from '../services/api';
 
-// Returns true when a goal's target period has elapsed without completion
 const isGoalOverdue = (goal) => {
   const startMonthStr = goal.startMonth || goal.createdAt?.slice(0, 7);
   if (!startMonthStr) return false;
@@ -33,7 +31,7 @@ const SavingsPage = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Vault log form (deposit / withdrawal)
+  // Vault log form
   const [showLogForm, setShowLogForm] = useState(false);
   const [logForm, setLogForm] = useState({ amount: '', description: '', type: 'DEPOSIT' });
 
@@ -64,7 +62,6 @@ const SavingsPage = () => {
 
   useEffect(() => { fetchData(); }, []);
 
-  // --- Goal actions ---
   const handleCompleteGoal = async (id) => {
     if (window.confirm('Mark this goal as completed? The full target amount will be added to your savings vault.')) {
       await savingsService.completeGoal(id);
@@ -106,7 +103,6 @@ const SavingsPage = () => {
     }
   };
 
-  // --- Vault log actions ---
   const handleLogSubmit = async (e) => {
     e.preventDefault();
     await savingsService.addLog(logForm);
@@ -134,7 +130,14 @@ const SavingsPage = () => {
     }
   };
 
-  if (loading) return <div style={{ padding: '2rem' }}>Loading savings...</div>;
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="animate-pulse flex flex-col items-center">
+        <PiggyBank size={48} className="text-primary mb-4" />
+        <p className="text-muted">Loading vault...</p>
+      </div>
+    </div>
+  );
 
   const activeGoals = data.goals.filter(g => g.isActive && !g.isCompleted);
   const completedGoals = data.goals.filter(g => g.isCompleted);
@@ -148,7 +151,6 @@ const SavingsPage = () => {
     return new Date(parseInt(y), parseInt(m) - 1).toLocaleString('default', { month: 'short', year: 'numeric' });
   };
 
-  // Per-month vault totals for the breakdown cards
   const vaultMonthlyHistory = (() => {
     const map = {};
     data.logs.forEach(log => {
@@ -163,19 +165,18 @@ const SavingsPage = () => {
     return Object.entries(map).sort(([a], [b]) => b.localeCompare(a));
   })();
 
-  // Goal whose extend modal is open
   const extendGoalData = extendGoalId ? data.goals.find(g => g.id === extendGoalId) : null;
 
   return (
-    <div className="page-outer" style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
-      <header style={{ marginBottom: '2.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div className="container animate-fade-in">
+      <header className="mb-8 flex flex-col md:flex-row justify-between md:items-center gap-6">
         <div>
-          <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '0.5rem' }}>Savings Vault</h1>
-          <p style={{ color: 'var(--text-muted)' }}>Manage your goals and long-term wealth.</p>
+          <h1 className="text-h1 mb-2">Savings Vault</h1>
+          <p className="text-muted text-lg">Manage your goals and long-term wealth.</p>
         </div>
-        <div className="glass-card" style={{ padding: '1rem 2rem', background: 'linear-gradient(135deg, rgba(99,102,241,0.2) 0%, rgba(16,185,129,0.2) 100%)' }}>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Total Savings</div>
-          <div style={{ fontSize: '2rem', fontWeight: 800, color: 'white' }}>
+        <div className="glass-card flex items-center justify-center flex-col p-6" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.2) 0%, rgba(16,185,129,0.2) 100%)' }}>
+          <div className="text-xs text-muted mb-1" style={{ letterSpacing: '0.1em' }}>TOTAL SAVINGS</div>
+          <div className="text-white" style={{ fontSize: '2.5rem', fontWeight: 900, lineHeight: 1 }}>
             ${parseFloat(data.totalSavings).toLocaleString()}
           </div>
         </div>
@@ -183,63 +184,54 @@ const SavingsPage = () => {
 
       {/* Vault Monthly Breakdown */}
       {vaultMonthlyHistory.length > 0 && (
-        <div style={{ marginBottom: '2.5rem' }}>
-          <div style={{ marginBottom: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Vault Monthly Breakdown</span>
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', opacity: 0.6 }}>— click a card to filter</span>
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-xs text-muted">VAULT MONTHLY BREAKDOWN</span>
+            <span className="text-xs text-muted opacity-60">— click a card to filter</span>
           </div>
-          <div style={{ display: 'flex', gap: '0.875rem', overflowX: 'auto', paddingBottom: '0.75rem' }}>
+          <div className="flex gap-4 overflow-x-auto pb-4" style={{ WebkitOverflowScrolling: 'touch' }}>
             {vaultMonthlyHistory.map(([month, totals]) => {
               const net = totals.deposits + totals.completions - totals.withdrawals;
               const isActive = selectedMonth === month;
+              const topBorderColor = net >= 0 ? 'var(--accent)' : 'var(--danger)';
+              const netColor = net >= 0 ? 'var(--accent)' : 'var(--danger)';
+              
               return (
                 <div
                   key={month}
                   onClick={() => setSelectedMonth(isActive ? '' : month)}
-                  style={{
-                    minWidth: '185px',
-                    borderRadius: '1rem',
-                    overflow: 'hidden',
-                    border: `1px solid ${isActive ? 'var(--primary)' : 'rgba(255,255,255,0.07)'}`,
-                    background: isActive ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.03)',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    flexShrink: 0,
-                    boxShadow: isActive ? '0 0 0 1px var(--primary)' : 'none'
-                  }}
+                  className={`flex-shrink-0 cursor-pointer transition-all duration-200 overflow-hidden rounded-xl ${isActive ? 'ring-2 ring-primary bg-primary-light' : 'bg-surface hover:bg-surface-hover border border-glass-border'}`}
+                  style={{ minWidth: '200px' }}
                 >
-                  <div style={{ height: '3px', background: net >= 0 ? 'linear-gradient(90deg,#10b981,#34d399)' : 'linear-gradient(90deg,#ef4444,#f87171)' }} />
-                  <div style={{ padding: '0.875rem 1.1rem 0.75rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <div style={{ fontSize: '0.95rem', fontWeight: 800, color: isActive ? 'var(--primary)' : 'white', letterSpacing: '-0.01em' }}>
+                  <div style={{ height: '3px', background: topBorderColor }} />
+                  <div className="p-4 border-b border-glass-border">
+                    <div className="font-bold" style={{ color: isActive ? 'var(--primary)' : 'white' }}>
                       {formatMonth(month)}
                     </div>
                   </div>
-                  <div style={{ padding: '0.75rem 1.1rem', display: 'grid', gap: '0.45rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <ArrowUpCircle size={11} color="#10b981" />
-                        <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.55)' }}>Deposits</span>
+                  <div className="p-4 grid gap-2">
+                    <div className="flex justify-between items-center text-sm">
+                      <div className="flex items-center gap-2 text-muted">
+                        <ArrowUpCircle size={14} className="text-accent" /> Deposits
                       </div>
-                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#10b981' }}>+${totals.deposits.toLocaleString()}</span>
+                      <span className="font-semibold text-accent">+${totals.deposits.toLocaleString()}</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <ArrowDownCircle size={11} color="#ef4444" />
-                        <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.55)' }}>Withdrawals</span>
+                    <div className="flex justify-between items-center text-sm">
+                      <div className="flex items-center gap-2 text-muted">
+                        <ArrowDownCircle size={14} className="text-danger" /> Withdrawals
                       </div>
-                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#ef4444' }}>-${totals.withdrawals.toLocaleString()}</span>
+                      <span className="font-semibold text-danger">-${totals.withdrawals.toLocaleString()}</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <CheckCircle2 size={11} color="#818cf8" />
-                        <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.55)' }}>Goals</span>
+                    <div className="flex justify-between items-center text-sm">
+                      <div className="flex items-center gap-2 text-muted">
+                        <CheckCircle2 size={14} className="text-primary" /> Goals
                       </div>
-                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#818cf8' }}>+${totals.completions.toLocaleString()}</span>
+                      <span className="font-semibold text-primary">+${totals.completions.toLocaleString()}</span>
                     </div>
                   </div>
-                  <div style={{ padding: '0.6rem 1.1rem', background: net >= 0 ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Net</span>
-                    <span style={{ fontSize: '0.9rem', fontWeight: 800, color: net >= 0 ? '#10b981' : '#ef4444' }}>
+                  <div className="p-3 flex justify-between items-center" style={{ background: net >= 0 ? 'rgba(16,185,129,0.05)' : 'rgba(239,68,68,0.05)' }}>
+                    <span className="text-xs text-muted">NET</span>
+                    <span className="font-bold text-lg" style={{ color: netColor }}>
                       {net >= 0 ? '+' : ''}${Math.abs(net).toLocaleString()}
                     </span>
                   </div>
@@ -250,67 +242,47 @@ const SavingsPage = () => {
         </div>
       )}
 
-      <div className="savings-layout">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      <div className="grid grid-cols-12 gap-8">
+        <div className="flex flex-col gap-8 lg-col-span-8">
 
           {/* Active Goals */}
           <section>
-            <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Target size={24} color="var(--primary)" />
-              Active Goals
+            <h3 className="flex items-center gap-2 mb-6 text-h3 text-primary">
+              <Target size={24} /> Active Goals
             </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+            <div className="grid md-grid-cols-2 gap-6">
               {activeGoals.map(goal => {
                 const overdue = isGoalOverdue(goal);
                 return (
-                  <div key={goal.id} className="glass-card" style={{ position: 'relative', border: overdue ? '1px solid rgba(239,68,68,0.4)' : undefined }}>
+                  <div key={goal.id} className="glass-card flex flex-col" style={{ border: overdue ? '1px solid rgba(239,68,68,0.4)' : undefined }}>
                     {overdue && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#ef4444', fontSize: '0.8rem', marginBottom: '0.75rem' }}>
-                        <AlertTriangle size={14} />
-                        Goal period ended — extend or delete
+                      <div className="flex items-center gap-2 text-danger text-sm mb-3">
+                        <AlertTriangle size={16} /> Goal period ended — extend or delete
                       </div>
                     )}
-                    <div style={{ fontWeight: 700, fontSize: '1.25rem', marginBottom: '0.25rem' }}>{goal.name}</div>
-                    <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+                    <div className="text-xl font-bold mb-1">{goal.name}</div>
+                    <div className="text-muted text-sm mb-6">
                       Target: ${parseFloat(goal.targetAmount).toLocaleString()} • {goal.targetMonths} month{goal.targetMonths !== 1 ? 's' : ''}
                     </div>
-                    <div style={{ marginBottom: '1.5rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
-                        <span style={{ color: 'var(--text-muted)' }}>Monthly Allocation</span>
-                        <span style={{ fontWeight: 600 }}>${parseFloat(goal.monthlySavings).toFixed(2)}/mo</span>
-                      </div>
+                    
+                    <div className="flex justify-between text-sm mb-6 mt-auto">
+                      <span className="text-muted">Monthly Allocation</span>
+                      <span className="font-semibold">${parseFloat(goal.monthlySavings).toFixed(2)}/mo</span>
                     </div>
-                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    
+                    <div className="flex gap-3">
                       {!overdue && (
-                        <button
-                          onClick={() => handleCompleteGoal(goal.id)}
-                          className="btn btn-primary"
-                          style={{ flex: 1, justifyContent: 'center', background: 'var(--accent)' }}
-                        >
+                        <button onClick={() => handleCompleteGoal(goal.id)} className="btn text-white flex-1" style={{ background: 'var(--accent)' }}>
                           <CheckCircle2 size={18} /> Done
                         </button>
                       )}
-                      <button
-                        onClick={() => handleOpenExtend(goal)}
-                        className="btn btn-outline"
-                        style={{ flex: 1, justifyContent: 'center' }}
-                      >
+                      <button onClick={() => handleOpenExtend(goal)} className="btn btn-outline flex-1">
                         <Clock size={18} /> Extend
                       </button>
-                      <button
-                        onClick={() => handleOpenEditGoal(goal)}
-                        className="btn btn-outline"
-                        style={{ width: '45px', padding: '0', justifyContent: 'center' }}
-                        title="Edit Goal"
-                      >
-                        <Pencil size={16} />
+                      <button onClick={() => handleOpenEditGoal(goal)} className="btn btn-outline p-2 px-3 text-muted" title="Edit Goal">
+                        <Pencil size={18} />
                       </button>
-                      <button
-                        onClick={() => handleDeleteGoal(goal.id)}
-                        className="btn btn-outline"
-                        style={{ width: '45px', padding: '0', justifyContent: 'center', borderColor: 'rgba(255,255,255,0.1)', color: 'var(--text-muted)' }}
-                        title="Delete Goal"
-                      >
+                      <button onClick={() => handleDeleteGoal(goal.id)} className="btn btn-outline p-2 px-3 text-muted hover:text-danger" title="Delete Goal">
                         <Trash2 size={18} />
                       </button>
                     </div>
@@ -318,7 +290,7 @@ const SavingsPage = () => {
                 );
               })}
               {activeGoals.length === 0 && (
-                <div className="glass-card" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '3rem' }}>
+                <div className="glass-card text-center text-muted p-12 lg-col-span-8">
                   No active goals. Set one on the dashboard!
                 </div>
               )}
@@ -327,228 +299,201 @@ const SavingsPage = () => {
 
           {/* Vault Transactions */}
           <section>
-            <div className="glass-card" style={{ padding: '0', overflow: 'hidden' }}>
-              {/* Card header with filters — identical layout to wallet ledger */}
-              <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.02)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
-                  <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <History size={20} color="var(--primary)" />
-                    Vault Transactions
+            <div className="glass-card no-padding">
+              <div className="p-6 border-b border-glass-border" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                <div className="flex flex-wrap justify-between items-center gap-4">
+                  <h3 className="flex items-center gap-2 m-0 text-h3 text-primary">
+                    <History size={24} /> Vault Transactions
                   </h3>
-                  <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <div className="flex items-center gap-2">
                     <input
                       type="month"
+                      className="input-field py-2"
                       value={selectedMonth}
                       onChange={e => setSelectedMonth(e.target.value)}
-                      style={{ padding: '0.4rem 0.75rem', background: 'rgba(255,255,255,0.07)', border: '1px solid var(--glass-border)', borderRadius: '0.5rem', color: 'white', fontSize: '0.875rem', outline: 'none', cursor: 'pointer' }}
+                      style={{ width: '160px', background: 'var(--surface-color)' }}
                     />
                     <button
                       onClick={() => setSelectedMonth('')}
-                      style={{
-                        padding: '0.4rem 0.85rem',
-                        borderRadius: '0.5rem',
-                        cursor: 'pointer',
-                        fontSize: '0.82rem',
-                        fontWeight: !selectedMonth ? 700 : 500,
-                        border: `1px solid ${!selectedMonth ? 'var(--primary)' : 'var(--glass-border)'}`,
-                        background: !selectedMonth ? 'rgba(99,102,241,0.18)' : 'rgba(255,255,255,0.05)',
-                        color: !selectedMonth ? 'var(--primary)' : 'var(--text-muted)',
-                        transition: 'all 0.15s'
-                      }}
+                      className={`btn ${!selectedMonth ? 'btn-primary' : 'btn-outline'}`}
+                      style={{ padding: '0.5rem 1rem' }}
                     >
                       All
                     </button>
                   </div>
                 </div>
               </div>
-              <div className="table-scroll"><table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid var(--glass-border)', textAlign: 'left' }}>
-                    <th style={{ padding: '1rem' }}>Date</th>
-                    <th style={{ padding: '1rem' }}>Description</th>
-                    <th style={{ padding: '1rem', textAlign: 'right' }}>Amount</th>
-                    <th style={{ padding: '1rem', width: '80px' }}></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredLogs.map(log => (
-                    <tr key={log.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
-                      {editLogId === log.id ? (
-                        <td colSpan={4} style={{ padding: '0.75rem 1rem' }}>
-                          <form onSubmit={handleEditLogSubmit} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                            <input
-                              type="date"
-                              value={editLogForm.date}
-                              onChange={e => setEditLogForm({ ...editLogForm, date: e.target.value })}
-                              style={{ padding: '0.4rem 0.6rem', background: 'rgba(255,255,255,0.1)', border: '1px solid var(--primary)', borderRadius: '6px', color: 'white' }}
-                              required
-                            />
-                            <input
-                              type="number"
-                              value={editLogForm.amount}
-                              onChange={e => setEditLogForm({ ...editLogForm, amount: e.target.value })}
-                              style={{ width: '110px', padding: '0.4rem 0.6rem', background: 'rgba(255,255,255,0.1)', border: '1px solid var(--primary)', borderRadius: '6px', color: 'white' }}
-                              required
-                            />
-                            <input
-                              type="text"
-                              value={editLogForm.description}
-                              onChange={e => setEditLogForm({ ...editLogForm, description: e.target.value })}
-                              style={{ flex: 1, minWidth: '140px', padding: '0.4rem 0.6rem', background: 'rgba(255,255,255,0.1)', border: '1px solid var(--primary)', borderRadius: '6px', color: 'white' }}
-                              required
-                            />
-                            <button type="submit" className="btn btn-primary" style={{ padding: '0.4rem 0.9rem' }}>Save</button>
-                            <button type="button" onClick={() => setEditLogId(null)} className="btn btn-outline" style={{ padding: '0.4rem 0.75rem' }}>
-                              <X size={14} />
-                            </button>
-                          </form>
+              
+              {/* Desktop Table */}
+              <div className="table-scroll desktop-only">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Description</th>
+                      <th style={{ textAlign: 'right' }}>Amount</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredLogs.map(log => (
+                      <tr key={log.id}>
+                        {editLogId === log.id ? (
+                          <td colSpan={4}>
+                            <form onSubmit={handleEditLogSubmit} className="flex gap-2 items-center">
+                              <input type="date" className="input-field py-1" value={editLogForm.date} onChange={e => setEditLogForm({ ...editLogForm, date: e.target.value })} required />
+                              <input type="number" className="input-field py-1" style={{ width: '120px' }} value={editLogForm.amount} onChange={e => setEditLogForm({ ...editLogForm, amount: e.target.value })} required />
+                              <input type="text" className="input-field py-1 flex-1" value={editLogForm.description} onChange={e => setEditLogForm({ ...editLogForm, description: e.target.value })} required />
+                              <button type="submit" className="btn btn-primary py-1 px-4">Save</button>
+                              <button type="button" onClick={() => setEditLogId(null)} className="btn btn-outline py-1 px-3"><X size={16}/></button>
+                            </form>
+                          </td>
+                        ) : (
+                          <>
+                            <td className="text-muted">{log.date}</td>
+                            <td>
+                              <div className="flex items-center gap-2">
+                                {log.type === 'DEPOSIT' && <ArrowUpCircle size={18} className="text-accent" />}
+                                {log.type === 'WITHDRAWAL' && <ArrowDownCircle size={18} className="text-danger" />}
+                                {log.type === 'GOAL_COMPLETION' && <CheckCircle2 size={18} className="text-primary" />}
+                                <span className="font-medium text-md">{log.description}</span>
+                              </div>
+                            </td>
+                            <td className={`text-right font-bold text-lg ${log.type === 'DEPOSIT' || log.type === 'GOAL_COMPLETION' ? 'text-accent' : 'text-danger'}`}>
+                              {log.type === 'DEPOSIT' || log.type === 'GOAL_COMPLETION' ? '+' : '-'}${parseFloat(log.amount).toFixed(2)}
+                            </td>
+                            <td style={{ textAlign: 'right' }}>
+                              <div className="flex gap-2 justify-end">
+                                <button className="btn-icon" onClick={() => handleEditLog(log)}><Pencil size={16}/></button>
+                                <button className="btn-icon hover:text-danger" onClick={() => handleDeleteLog(log.id)}><Trash2 size={16}/></button>
+                              </div>
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    ))}
+                    {filteredLogs.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="p-12 text-center text-muted">
+                          {selectedMonth ? `No transactions for ${selectedMonth}.` : 'No vault transactions yet.'}
                         </td>
-                      ) : (
-                        <>
-                          <td style={{ padding: '1rem', color: 'var(--text-muted)', fontSize: '0.875rem' }}>{log.date}</td>
-                          <td style={{ padding: '1rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                              {log.type === 'DEPOSIT' && <ArrowUpCircle size={16} color="var(--accent)" />}
-                              {log.type === 'WITHDRAWAL' && <ArrowDownCircle size={16} color="var(--danger)" />}
-                              {log.type === 'GOAL_COMPLETION' && <CheckCircle2 size={16} color="var(--primary)" />}
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              
+              {/* Mobile Card List */}
+              <div className="mobile-card-list mobile-only">
+                {filteredLogs.map(log => (
+                  <div key={log.id} className="p-4 rounded-xl border border-glass-border" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                    {editLogId === log.id ? (
+                      <div className="grid gap-3">
+                        <input type="date" className="input-field" value={editLogForm.date} onChange={e => setEditLogForm({ ...editLogForm, date: e.target.value })} required />
+                        <input type="text" className="input-field" value={editLogForm.description} onChange={e => setEditLogForm({ ...editLogForm, description: e.target.value })} required />
+                        <input type="number" className="input-field" value={editLogForm.amount} onChange={e => setEditLogForm({ ...editLogForm, amount: e.target.value })} required />
+                        <div className="flex gap-2 mt-2">
+                          <button onClick={handleEditLogSubmit} className="btn btn-primary flex-1 py-2">Save</button>
+                          <button onClick={() => setEditLogId(null)} className="btn btn-outline flex-1 py-2">Cancel</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <div className="flex items-center gap-2 font-medium text-md mb-1">
+                              {log.type === 'DEPOSIT' && <ArrowUpCircle size={16} className="text-accent" />}
+                              {log.type === 'WITHDRAWAL' && <ArrowDownCircle size={16} className="text-danger" />}
+                              {log.type === 'GOAL_COMPLETION' && <CheckCircle2 size={16} className="text-primary" />}
                               {log.description}
                             </div>
-                          </td>
-                          <td style={{
-                            padding: '1rem',
-                            textAlign: 'right',
-                            fontWeight: 700,
-                            color: (log.type === 'DEPOSIT' || log.type === 'GOAL_COMPLETION') ? 'var(--accent)' : 'var(--danger)'
-                          }}>
-                            {(log.type === 'DEPOSIT' || log.type === 'GOAL_COMPLETION') ? '+' : '-'}${parseFloat(log.amount).toFixed(2)}
-                          </td>
-                          <td style={{ padding: '1rem', textAlign: 'right' }}>
-                            <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
-                              <button
-                                onClick={() => handleEditLog(log)}
-                                title="Edit"
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px' }}
-                              >
-                                <Pencil size={14} />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteLog(log.id)}
-                                title="Delete"
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', padding: '4px' }}
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </div>
-                          </td>
-                        </>
-                      )}
-                    </tr>
-                  ))}
-                  {filteredLogs.length === 0 && (
-                    <tr>
-                      <td colSpan={4} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                        {selectedMonth ? `No transactions for ${selectedMonth}.` : 'No vault transactions yet.'}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table></div>
+                            <div className="text-xs text-muted">{log.date}</div>
+                          </div>
+                          <div className={`font-bold text-lg ${log.type === 'DEPOSIT' || log.type === 'GOAL_COMPLETION' ? 'text-accent' : 'text-danger'}`}>
+                            {log.type === 'DEPOSIT' || log.type === 'GOAL_COMPLETION' ? '+' : '-'}${parseFloat(log.amount).toFixed(2)}
+                          </div>
+                        </div>
+                        <div className="flex justify-end pt-3 border-t border-glass-border">
+                          <div className="flex gap-2">
+                            <button className="btn-icon p-1" onClick={() => handleEditLog(log)}><Pencil size={16} /></button>
+                            <button className="btn-icon p-1 text-danger" onClick={() => handleDeleteLog(log.id)}><Trash2 size={16} /></button>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
+                {filteredLogs.length === 0 && (
+                  <div className="p-8 text-center text-muted">
+                    {selectedMonth ? `No transactions for ${selectedMonth}.` : 'No vault transactions yet.'}
+                  </div>
+                )}
+              </div>
+
             </div>
           </section>
         </div>
 
-        {/* Sidebar — paddingTop pushes cards to align with goal cards below the "Active Goals" heading */}
-        <aside style={{ display: 'flex', flexDirection: 'column', gap: '2rem', alignSelf: 'flex-start', paddingTop: '3rem' }}>
-          {/* Vault Action Panel — deliberately different from goal cards */}
-          <div style={{ borderRadius: '1rem', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(8,14,28,0.95)' }}>
-            {/* Gradient banner with total */}
-            <div style={{ padding: '1.25rem 1.5rem', background: 'linear-gradient(135deg, rgba(16,185,129,0.18) 0%, rgba(99,102,241,0.18) 100%)', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <div style={{ width: '46px', height: '46px', borderRadius: '0.875rem', background: 'linear-gradient(135deg,#10b981,#6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <PiggyBank size={22} color="white" />
+        {/* Sidebar */}
+        <aside className="lg-col-span-4 flex flex-col gap-6">
+          <div className="rounded-2xl overflow-hidden border border-glass-border" style={{ background: 'var(--surface-color)' }}>
+            <div className="p-6 flex items-center gap-4 border-b border-glass-border" style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.1) 0%, rgba(99,102,241,0.1) 100%)' }}>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg,#10b981,#6366f1)' }}>
+                <PiggyBank size={24} className="text-white" />
               </div>
               <div>
-                <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.1rem' }}>Total Vault Balance</div>
-                <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'white', letterSpacing: '-0.02em' }}>
+                <div className="text-xs text-muted mb-1" style={{ letterSpacing: '0.1em' }}>VAULT BALANCE</div>
+                <div className="text-white font-bold" style={{ fontSize: '1.75rem', lineHeight: 1 }}>
                   ${parseFloat(data.totalSavings).toLocaleString()}
                 </div>
               </div>
             </div>
-            {/* Action buttons with icon blocks */}
-            <div style={{ padding: '1rem 1.1rem', display: 'grid', gap: '0.6rem' }}>
-              <button
-                onClick={() => { setLogForm({ ...logForm, type: 'DEPOSIT' }); setShowLogForm(true); }}
-                style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.8rem 1rem', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.22)', borderRadius: '0.75rem', color: '#10b981', cursor: 'pointer', width: '100%', fontSize: '0.9rem', fontWeight: 600 }}
-              >
-                <div style={{ width: '30px', height: '30px', background: 'rgba(16,185,129,0.15)', borderRadius: '0.45rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Plus size={15} color="#10b981" />
-                </div>
-                Add to Vault
+            <div className="p-6 grid gap-3">
+              <button onClick={() => { setLogForm({ ...logForm, type: 'DEPOSIT' }); setShowLogForm(true); }} className="btn w-full flex items-center gap-3 py-3" style={{ background: 'var(--accent-light)', color: 'var(--accent)', border: '1px solid rgba(16,185,129,0.2)' }}>
+                <div className="bg-accent bg-opacity-20 p-1 rounded-md"><Plus size={18} /></div> Add to Vault
               </button>
-              <button
-                onClick={() => { setLogForm({ ...logForm, type: 'WITHDRAWAL' }); setShowLogForm(true); }}
-                style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.8rem 1rem', background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '0.75rem', color: '#ef4444', cursor: 'pointer', width: '100%', fontSize: '0.9rem', fontWeight: 600 }}
-              >
-                <div style={{ width: '30px', height: '30px', background: 'rgba(239,68,68,0.1)', borderRadius: '0.45rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <ArrowDownCircle size={15} color="#ef4444" />
-                </div>
-                Spend from Vault
+              <button onClick={() => { setLogForm({ ...logForm, type: 'WITHDRAWAL' }); setShowLogForm(true); }} className="btn w-full flex items-center gap-3 py-3" style={{ background: 'var(--danger-light)', color: 'var(--danger)', border: '1px solid rgba(239,68,68,0.2)' }}>
+                <div className="bg-danger bg-opacity-20 p-1 rounded-md"><ArrowDownCircle size={18} /></div> Spend from Vault
               </button>
             </div>
           </div>
 
           {showLogForm && (
-            <div className="animate-fade-in" style={{ height: 'fit-content', padding: '1.25rem 1.5rem', borderRadius: '1rem', background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.35)' }}>
-              <h4 style={{ marginBottom: '1rem' }}>
+            <div className="glass-card animate-fade-in" style={{ border: '1px solid var(--primary-light)', background: 'rgba(99,102,241,0.05)' }}>
+              <h4 className="text-lg mb-4">
                 {logForm.type === 'DEPOSIT' ? 'Deposit to Vault' : 'Withdraw from Vault'}
               </h4>
-              <form onSubmit={handleLogSubmit} style={{ display: 'grid', gap: '1rem' }}>
-                <div className="input-group" style={{ marginBottom: 0 }}>
-                  <label>Amount</label>
-                  <input
-                    type="number"
-                    value={logForm.amount}
-                    onChange={e => setLogForm({ ...logForm, amount: e.target.value })}
-                    required
-                  />
+              <form onSubmit={handleLogSubmit} className="grid gap-4">
+                <div className="input-group">
+                  <label className="input-label">Amount</label>
+                  <input type="number" className="input-field" value={logForm.amount} onChange={e => setLogForm({ ...logForm, amount: e.target.value })} required />
                 </div>
-                <div className="input-group" style={{ marginBottom: 0 }}>
-                  <label>Description</label>
-                  <input
-                    type="text"
-                    placeholder="Why this move?"
-                    value={logForm.description}
-                    onChange={e => setLogForm({ ...logForm, description: e.target.value })}
-                    required
-                  />
+                <div className="input-group">
+                  <label className="input-label">Description</label>
+                  <input type="text" className="input-field" placeholder="Why this move?" value={logForm.description} onChange={e => setLogForm({ ...logForm, description: e.target.value })} required />
                 </div>
-                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                  <button type="submit" className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }}>Confirm</button>
-                  <button type="button" onClick={() => setShowLogForm(false)} className="btn btn-outline" style={{ flex: 1, justifyContent: 'center' }}>Cancel</button>
+                <div className="flex gap-3 mt-2">
+                  <button type="submit" className="btn btn-primary flex-1">Confirm</button>
+                  <button type="button" onClick={() => setShowLogForm(false)} className="btn btn-outline flex-1">Cancel</button>
                 </div>
               </form>
             </div>
           )}
 
           {completedGoals.length > 0 && (
-            <div style={{ height: 'fit-content', padding: '1.25rem 1.5rem', borderRadius: '1rem', background: 'rgba(251,191,36,0.05)', border: '1px solid rgba(251,191,36,0.2)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1rem' }}>
-                <span style={{ fontSize: '1.1rem' }}>🏆</span>
-                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#fbbf24' }}>Hall of Fame</h3>
+            <div className="glass-card" style={{ background: 'rgba(251,191,36,0.05)', border: '1px solid rgba(251,191,36,0.2)' }}>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-xl">🏆</span>
+                <h3 className="text-lg font-bold" style={{ color: '#fbbf24' }}>Hall of Fame</h3>
               </div>
-              <div style={{ display: 'grid', gap: '0.75rem' }}>
+              <div className="grid gap-3">
                 {completedGoals.map(goal => (
-                  <div key={goal.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.875rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <CheckCircle2 size={16} color="var(--accent)" />
-                      <span>{goal.name}</span>
+                  <div key={goal.id} className="flex items-center justify-between text-sm p-3 rounded-lg bg-black bg-opacity-20">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle2 size={18} className="text-accent" />
+                      <span className="font-medium text-white">{goal.name}</span>
                     </div>
-                    <button
-                      onClick={() => handleOpenEditGoal(goal)}
-                      title="Rename"
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '2px' }}
-                    >
-                      <Pencil size={13} />
-                    </button>
+                    <button onClick={() => handleOpenEditGoal(goal)} className="btn-icon p-1"><Pencil size={14} /></button>
                   </div>
                 ))}
               </div>
@@ -559,60 +504,36 @@ const SavingsPage = () => {
 
       {/* Edit Goal Modal */}
       {editGoalId && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="glass-card" style={{ width: '400px', border: '1px solid var(--primary)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h3 style={{ margin: 0 }}>Edit Goal</h3>
-              <button onClick={() => setEditGoalId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
-                <X size={20} />
-              </button>
+        <div className="fixed inset-0 flex items-center justify-center p-4" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.8)', zIndex: 1000, backdropFilter: 'blur(4px)' }}>
+          <div className="glass-card w-full max-w-md animate-fade-in" style={{ border: '1px solid var(--primary)' }}>
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold">Edit Goal</h3>
+              <button onClick={() => setEditGoalId(null)} className="btn-icon"><X size={20} /></button>
             </div>
-            <form onSubmit={handleEditGoalSubmit} style={{ display: 'grid', gap: '1rem' }}>
-              <div className="input-group" style={{ marginBottom: 0 }}>
-                <label>Goal Name</label>
-                <input
-                  type="text"
-                  value={editGoalForm.name}
-                  onChange={e => setEditGoalForm({ ...editGoalForm, name: e.target.value })}
-                  required
-                />
+            <form onSubmit={handleEditGoalSubmit} className="grid gap-4">
+              <div className="input-group">
+                <label className="input-label">Goal Name</label>
+                <input type="text" className="input-field" value={editGoalForm.name} onChange={e => setEditGoalForm({ ...editGoalForm, name: e.target.value })} required />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div className="input-group" style={{ marginBottom: 0 }}>
-                  <label>Target Amount ($)</label>
-                  <input
-                    type="number"
-                    min="1"
-                    step="0.01"
-                    value={editGoalForm.targetAmount}
-                    onChange={e => setEditGoalForm({ ...editGoalForm, targetAmount: e.target.value })}
-                    required
-                  />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="input-group">
+                  <label className="input-label">Target Amount ($)</label>
+                  <input type="number" min="1" step="0.01" className="input-field" value={editGoalForm.targetAmount} onChange={e => setEditGoalForm({ ...editGoalForm, targetAmount: e.target.value })} required />
                 </div>
-                <div className="input-group" style={{ marginBottom: 0 }}>
-                  <label>Months</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={editGoalForm.targetMonths}
-                    onChange={e => setEditGoalForm({ ...editGoalForm, targetMonths: e.target.value })}
-                    required
-                  />
+                <div className="input-group">
+                  <label className="input-label">Months</label>
+                  <input type="number" min="1" className="input-field" value={editGoalForm.targetMonths} onChange={e => setEditGoalForm({ ...editGoalForm, targetMonths: e.target.value })} required />
                 </div>
               </div>
               {editGoalForm.targetAmount && editGoalForm.targetMonths && (
-                <div style={{ background: 'rgba(99,102,241,0.1)', borderRadius: '8px', padding: '0.75rem', fontSize: '0.875rem' }}>
-                  New monthly: <strong style={{ color: 'white' }}>${(parseFloat(editGoalForm.targetAmount) / parseInt(editGoalForm.targetMonths)).toFixed(2)}/mo</strong>
+                <div className="p-3 rounded-lg text-sm bg-primary bg-opacity-10 text-primary">
+                  New monthly: <strong className="text-white">${(parseFloat(editGoalForm.targetAmount) / parseInt(editGoalForm.targetMonths)).toFixed(2)}/mo</strong>
                 </div>
               )}
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
-                Renaming will also update the wallet transactions and vault logs to match.
-              </p>
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }}>
-                  <Save size={16} /> Save Changes
-                </button>
-                <button type="button" onClick={() => setEditGoalId(null)} className="btn btn-outline" style={{ flex: 1, justifyContent: 'center' }}>Cancel</button>
+              <p className="text-xs text-muted">Renaming will also update the wallet transactions and vault logs to match.</p>
+              <div className="flex gap-3 mt-4">
+                <button type="submit" className="btn btn-primary flex-1"><Save size={18} /> Save Changes</button>
+                <button type="button" onClick={() => setEditGoalId(null)} className="btn btn-outline flex-1">Cancel</button>
               </div>
             </form>
           </div>
@@ -621,55 +542,34 @@ const SavingsPage = () => {
 
       {/* Extend Goal Modal */}
       {extendGoalId && extendGoalData && (
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
-        }}>
-          <div className="glass-card" style={{ width: '420px', border: '1px solid var(--primary)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h3 style={{ margin: 0 }}>Extend Goal: {extendGoalData.name}</h3>
-              <button onClick={() => setExtendGoalId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
-                <X size={20} />
-              </button>
+        <div className="fixed inset-0 flex items-center justify-center p-4" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.8)', zIndex: 1000, backdropFilter: 'blur(4px)' }}>
+          <div className="glass-card w-full max-w-md animate-fade-in" style={{ border: '1px solid var(--primary)' }}>
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold">Extend Goal</h3>
+              <button onClick={() => setExtendGoalId(null)} className="btn-icon"><X size={20} /></button>
             </div>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
-              Original target: <strong style={{ color: 'white' }}>${parseFloat(extendGoalData.targetAmount).toLocaleString()}</strong>.
+            <p className="text-sm text-muted mb-6">
+              Original target: <strong className="text-white">${parseFloat(extendGoalData.targetAmount).toLocaleString()}</strong>.<br/>
               The amount you've already saved will be moved to your vault. Enter how much is still remaining and how many months you need.
             </p>
-            <form onSubmit={handleExtendSubmit} style={{ display: 'grid', gap: '1rem' }}>
-              <div className="input-group" style={{ marginBottom: 0 }}>
-                <label>Remaining Amount ($)</label>
-                <input
-                  type="number"
-                  min="0"
-                  max={extendGoalData.targetAmount}
-                  step="0.01"
-                  placeholder={`Max: $${parseFloat(extendGoalData.targetAmount).toLocaleString()}`}
-                  value={extendForm.remainingAmount}
-                  onChange={e => setExtendForm({ ...extendForm, remainingAmount: e.target.value })}
-                  required
-                />
+            <form onSubmit={handleExtendSubmit} className="grid gap-4">
+              <div className="input-group">
+                <label className="input-label">Remaining Amount ($)</label>
+                <input type="number" min="0" max={extendGoalData.targetAmount} step="0.01" className="input-field" placeholder={`Max: $${parseFloat(extendGoalData.targetAmount).toLocaleString()}`} value={extendForm.remainingAmount} onChange={e => setExtendForm({ ...extendForm, remainingAmount: e.target.value })} required />
               </div>
-              <div className="input-group" style={{ marginBottom: 0 }}>
-                <label>Months Needed</label>
-                <input
-                  type="number"
-                  min="1"
-                  placeholder="e.g. 2"
-                  value={extendForm.newMonths}
-                  onChange={e => setExtendForm({ ...extendForm, newMonths: e.target.value })}
-                  required
-                />
+              <div className="input-group">
+                <label className="input-label">Months Needed</label>
+                <input type="number" min="1" className="input-field" placeholder="e.g. 2" value={extendForm.newMonths} onChange={e => setExtendForm({ ...extendForm, newMonths: e.target.value })} required />
               </div>
               {extendForm.remainingAmount && extendForm.newMonths && (
-                <div style={{ background: 'rgba(99,102,241,0.1)', borderRadius: '8px', padding: '0.75rem', fontSize: '0.875rem' }}>
-                  <div>Saved so far → vault: <strong style={{ color: 'var(--accent)' }}>${(parseFloat(extendGoalData.targetAmount) - parseFloat(extendForm.remainingAmount || 0)).toFixed(2)}</strong></div>
-                  <div>New monthly: <strong style={{ color: 'white' }}>${(parseFloat(extendForm.remainingAmount) / parseInt(extendForm.newMonths)).toFixed(2)}/mo</strong></div>
+                <div className="p-3 rounded-lg text-sm bg-primary bg-opacity-10 text-primary">
+                  <div className="mb-1">Saved so far → vault: <strong className="text-accent">${(parseFloat(extendGoalData.targetAmount) - parseFloat(extendForm.remainingAmount || 0)).toFixed(2)}</strong></div>
+                  <div>New monthly: <strong className="text-white">${(parseFloat(extendForm.remainingAmount) / parseInt(extendForm.newMonths)).toFixed(2)}/mo</strong></div>
                 </div>
               )}
-              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }}>Confirm Extension</button>
-                <button type="button" onClick={() => setExtendGoalId(null)} className="btn btn-outline" style={{ flex: 1, justifyContent: 'center' }}>Cancel</button>
+              <div className="flex gap-3 mt-4">
+                <button type="submit" className="btn btn-primary flex-1">Confirm</button>
+                <button type="button" onClick={() => setExtendGoalId(null)} className="btn btn-outline flex-1">Cancel</button>
               </div>
             </form>
           </div>

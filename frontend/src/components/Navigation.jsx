@@ -16,45 +16,45 @@ const Navigation = () => {
   return (
     <>
       {/* ── Top bar ── */}
-      <nav style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '0.75rem 2rem',
-        background: 'rgba(15, 23, 42, 0.8)',
-        backdropFilter: 'blur(16px)',
-        borderBottom: '1px solid var(--glass-border)',
-        position: 'sticky',
-        top: 0,
-        zIndex: 100
-      }}>
+      <nav 
+        className="flex justify-between items-center p-4 desktop-only"
+        style={{
+          background: 'rgba(15, 23, 42, 0.8)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          borderBottom: '1px solid var(--glass-border)',
+          position: 'sticky',
+          top: 0,
+          zIndex: 100
+        }}
+      >
         {/* Logo + desktop links */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '2.5rem' }}>
-          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', color: 'white' }}>
-            <div style={{ padding: '0.5rem', background: 'var(--primary)', borderRadius: '0.75rem' }}>
+        <div className="flex items-center gap-8">
+          <Link to="/" className="flex items-center gap-2 text-white">
+            <div className="p-2" style={{ background: 'var(--primary)', borderRadius: '0.75rem' }}>
               <Wallet color="white" size={22} />
             </div>
-            <span style={{ fontSize: '1.2rem', fontWeight: 900, letterSpacing: '-0.02em' }}>SPENDO</span>
+            <span className="text-h3" style={{ letterSpacing: '-0.02em', margin: 0 }}>SPENDO</span>
           </Link>
 
-          {/* Desktop nav links — hidden on mobile via CSS */}
-          <div className="nav-links" style={{ display: 'flex', gap: '0.5rem' }}>
+          {/* Desktop nav links */}
+          <div className="flex gap-2">
             {navLinks.map(({ to, label, Icon }) => {
               const active = location.pathname === to;
               return (
-                <Link key={to} to={to} style={{
-                  color: active ? 'white' : 'var(--text-muted)',
-                  background: active ? 'rgba(255,255,255,0.05)' : 'transparent',
-                  padding: '0.5rem 1rem',
-                  borderRadius: '0.5rem',
-                  textDecoration: 'none',
-                  fontWeight: 600,
-                  fontSize: '0.9rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  transition: 'all 0.2s'
-                }}>
+                <Link 
+                  key={to} 
+                  to={to} 
+                  className="flex items-center gap-2 text-sm"
+                  style={{
+                    color: active ? 'white' : 'var(--text-muted)',
+                    background: active ? 'rgba(255,255,255,0.05)' : 'transparent',
+                    padding: '0.5rem 1rem',
+                    borderRadius: '0.5rem',
+                    fontWeight: 600,
+                    transition: 'all 0.2s'
+                  }}
+                >
                   <Icon size={17} />
                   {label}
                 </Link>
@@ -63,32 +63,29 @@ const Navigation = () => {
           </div>
         </div>
 
-        {/* User info + logout — hidden on mobile via CSS */}
-        <div className="nav-user-block" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', paddingRight: '1.5rem', borderRight: '1px solid var(--glass-border)' }}>
-            <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary), var(--primary-hover))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.85rem', flexShrink: 0 }}>
+        {/* User info + logout */}
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3" style={{ paddingRight: '1.5rem', borderRight: '1px solid var(--glass-border)' }}>
+            <div 
+              className="flex items-center justify-center text-sm"
+              style={{ 
+                width: '34px', height: '34px', borderRadius: '50%', 
+                background: 'linear-gradient(135deg, var(--primary), var(--primary-hover))', 
+                fontWeight: 700, flexShrink: 0 
+              }}
+            >
               {user?.firstName?.charAt(0)?.toUpperCase() || 'U'}
             </div>
             <div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 500 }}>Hello,</div>
-              <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{user?.firstName || 'User'}</div>
+              <div className="text-xs text-muted" style={{ fontWeight: 500 }}>Hello,</div>
+              <div className="text-sm text-white" style={{ fontWeight: 600 }}>{user?.firstName || 'User'}</div>
             </div>
           </div>
-          <button onClick={logout} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, fontSize: '0.875rem', padding: '0.5rem' }}>
+          <button onClick={logout} className="flex items-center gap-2 text-sm text-danger" style={{ background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
             <LogOut size={17} />
             Logout
           </button>
         </div>
-
-        {/* Mobile: just show logout icon */}
-        <button
-          onClick={logout}
-          style={{ display: 'none' }}
-          className="mobile-logout"
-          title="Logout"
-        >
-          <LogOut size={20} color="var(--danger)" />
-        </button>
       </nav>
 
       {/* ── Mobile bottom tab bar ── */}
@@ -96,16 +93,13 @@ const Navigation = () => {
         {navLinks.map(({ to, label, Icon }) => {
           const active = location.pathname === to;
           return (
-            <Link key={to} to={to} className={active ? 'active' : ''}>
+            <Link key={to} to={to} className={`nav-item-mobile ${active ? 'active' : ''}`}>
               <Icon size={22} />
               {label}
             </Link>
           );
         })}
-        <button
-          onClick={logout}
-          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', fontSize: '0.65rem', fontWeight: 600, padding: '0.5rem 1rem', flex: 1 }}
-        >
+        <button onClick={logout} className="nav-item-mobile text-danger" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
           <LogOut size={22} />
           Logout
         </button>
